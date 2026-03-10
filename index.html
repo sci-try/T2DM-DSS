@@ -10,19 +10,20 @@
 
 <body>
   <header class="topbar">
-      <div class="container">
-        <div class="brand">
-          <div class="brand__title">T2D Injectable Therapy CDS</div>
-          <div class="brand__subtitle">Country-adaptive decision support (Pyodide, client-side)
+    <div class="container">
+      <div class="brand">
+        <div class="brand__title">T2D Injectable Therapy CDS</div>
+        <div class="brand__subtitle">
+          Country-adaptive decision support (Pyodide, client-side)
         </div>
-            
+      </div>
+
+      <div class="top-actions">
+        <a class="btn-link" href="./algorithm.html">Algorithm</a>
+        <div class="badge">MVP • v2</div>
+      </div>
     </div>
-    <div class="top-actions">
-      <a class="btn-link" href="./algorithm.html">Algorithm</a>
-      <div class="badge">MVP • v1</div>
-    </div>
-  </div>
-</header>
+  </header>
 
   <main class="container grid">
     <section class="card">
@@ -32,14 +33,9 @@
         <div class="field">
           <label for="country">Country profile</label>
           <select id="country">
-            <option value="RU">Russia (RU)</option>
             <option value="TR">Turkey (TR)</option>
             <option value="LB">Lebanon (LB)</option>
-            <option value="JO">Jordan (JO)</option>
             <option value="IQ">Iraq (IQ)</option>
-            <option value="EU">EU</option>
-            <option value="US">USA</option>
-            <option value="OTHER">Other</option>
           </select>
           <div class="hint" id="country_hint"></div>
         </div>
@@ -50,14 +46,14 @@
         </div>
 
         <div class="field">
-          <label for="bmi">BMI (kg/m²)</label>
-          <input id="bmi" type="number" step="0.1" min="10" max="80" placeholder="e.g., 33.5" />
+          <label for="hba1c_target">HbA1c target (%)</label>
+          <input id="hba1c_target" type="number" step="0.1" min="4" max="10" placeholder="e.g., 7.0" />
+          <div class="hint">Optional. If not provided, default HbA1c target = 7.0% will be used.</div>
         </div>
 
         <div class="field">
-          <label for="egfr">eGFR (ml/min/1.73m²)</label>
-          <input id="egfr" type="number" step="1" min="1" max="200" placeholder="optional" />
-          <div class="hint">Reserved for future renal constraints (optional).</div>
+          <label for="bmi">BMI (kg/m²)</label>
+          <input id="bmi" type="number" step="0.1" min="10" max="80" placeholder="e.g., 33.5" />
         </div>
       </div>
 
@@ -65,39 +61,59 @@
 
       <h3>Clinical status</h3>
       <div class="check-grid">
-        <label class="check"><input id="symptoms_catabolic" type="checkbox" /> Catabolic symptoms / symptomatic hyperglycaemia</label>
-        <label class="check"><input id="ascvd" type="checkbox" /> ASCVD</label>
-        <label class="check"><input id="hf" type="checkbox" /> Heart failure</label>
-        <label class="check"><input id="ckd" type="checkbox" /> CKD</label>
-      </div>
+        <label class="check">
+          <input id="symptoms_catabolic" type="checkbox" />
+          Catabolic symptoms / symptomatic hyperglycaemia
+        </label>
 
-      <hr class="sep" />
+        <label class="check" id="ppg_uncontrolled_wrap" hidden>
+          <input id="ppg_uncontrolled" type="checkbox" />
+          Postprandial glucose uncontrolled?
+        </label>
 
-      <h3>Access</h3>
-      <div class="check-grid">
-        <label class="check"><input id="glp1_available" type="checkbox" checked /> Long-acting GLP-1 RA available</label>
-        <label class="check"><input id="gi_contra_glp1" type="checkbox" /> GI contraindication to GLP-1 RA</label>
-        <label class="check"><input id="frc_available" type="checkbox" checked /> FRC (iGlarLixi) available</label>
-      </div>
-      <div class="hint">
-        Note: FRC availability is independent from GLP-1 availability. In Jordan, FRC is treated as not available.
+        <label class="check" id="recurrent_hypoglycemia_wrap" hidden>
+          <input id="recurrent_hypoglycemia" type="checkbox" />
+          Recurrent hypoglycaemia
+        </label>
+
+        <label class="check" id="on_rapid_added_wrap" hidden>
+          <input id="on_rapid_added" type="checkbox" />
+          Rapid-acting insulin already added?
+        </label>
       </div>
 
       <hr class="sep" />
 
       <h3>Current injectable regimen</h3>
       <div class="radio-grid">
-        <label class="radio"><input type="radio" name="regimen" value="none" checked /> None / first injectable selection</label>
-        <label class="radio"><input type="radio" name="regimen" value="basal" /> Basal insulin</label>
-        <label class="radio"><input type="radio" name="regimen" value="glp1" /> GLP-1 RA</label>
-        <label class="radio"><input type="radio" name="regimen" value="frc" /> FRC (iGlarLixi)</label>
-        <label class="radio"><input type="radio" name="regimen" value="premix" /> Premix insulin</label>
-        <label class="radio"><input type="radio" name="regimen" value="bb" /> Basal-bolus insulin</label>
+        <label class="radio">
+          <input type="radio" name="regimen" value="none" checked />
+          None / first injectable selection
+        </label>
+
+        <label class="radio">
+          <input type="radio" name="regimen" value="basal" />
+          Basal insulin
+        </label>
+
+        <label class="radio">
+          <input type="radio" name="regimen" value="frc" />
+          FRC
+        </label>
+
+        <label class="radio">
+          <input type="radio" name="regimen" value="premix" />
+          Premix insulin
+        </label>
+
+        <label class="radio">
+          <input type="radio" name="regimen" value="bb" />
+          Basal-bolus insulin
+        </label>
       </div>
 
-      <div class="check-grid">
-        <label class="check"><input id="recurrent_hypoglycemia" type="checkbox" /> Recurrent hypoglycaemia</label>
-        <label class="check"><input id="regimen_complexity" type="checkbox" /> Regimen complexity / adherence issues</label>
+      <div class="hint">
+        Logic is reimbursement-oriented. Standalone GLP-1 RA is not used in the main routing tree and may appear only as an optional note.
       </div>
 
       <div class="actions">
@@ -113,10 +129,6 @@
         <div class="kv__k">Therapy</div>
         <div class="kv__v" id="therapy"></div>
       </div>
-      <div class="kv">
-        <div class="kv__k">Country profile</div>
-        <div class="kv__v mono" id="profile"></div>
-      </div>
 
       <hr class="sep" />
 
@@ -129,11 +141,6 @@
       <div id="comments_block" hidden>
         <h3>Notes</h3>
         <ul id="comments" class="list"></ul>
-      </div>
-
-      <div id="basis_block" hidden>
-        <h3>Guideline basis (tags)</h3>
-        <div id="basis" class="chips"></div>
       </div>
 
       <hr class="sep" />
