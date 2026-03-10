@@ -4,7 +4,9 @@ const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 
 function numOrNull(id) {
-  const v = document.getElementById(id).value;
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const v = el.value;
   if (v === "" || v === null) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -26,30 +28,18 @@ function getInputs() {
   return {
     country: document.getElementById("country").value,
     hba1c: numOrNull("hba1c"),
+    hba1c_target: numOrNull("hba1c_target"),
     bmi: numOrNull("bmi"),
-    egfr: numOrNull("egfr"),
 
     symptoms_catabolic: boolVal("symptoms_catabolic"),
-    ascvd: boolVal("ascvd"),
-    hf: boolVal("hf"),
-    ckd: boolVal("ckd"),
+    recurrent_hypoglycemia: boolVal("recurrent_hypoglycemia"),
+    ppg_uncontrolled: boolVal("ppg_uncontrolled"),
 
-    glp1_available: boolVal("glp1_available"),
-    gi_contra_glp1: boolVal("gi_contra_glp1"),
-    frc_available: boolVal("frc_available"),
-
-    // regimen flags expected by engine.py (radio mapped to booleans)
     on_basal_insulin: regimen === "basal",
-    on_glp1: regimen === "glp1",
     on_frc: regimen === "frc",
     on_premix: regimen === "premix",
     on_basal_bolus: regimen === "bb",
-
-    recurrent_hypoglycemia: boolVal("recurrent_hypoglycemia"),
-    regimen_complexity: boolVal("regimen_complexity"),
-
-    // Optional: allow overriding A1c target later (engine defaults to 7.0 if used)
-    // a1c_target: numOrNull("a1c_target"),
+    on_rapid_added: boolVal("on_rapid_added"),
   };
 }
 
@@ -63,29 +53,14 @@ function fillList(ulId, items) {
   });
 }
 
-function fillChips(containerId, items) {
-  const box = document.getElementById(containerId);
-  box.innerHTML = "";
-  (items || []).forEach((t) => {
-    const span = document.createElement("span");
-    span.className = "chip";
-    span.textContent = String(t);
-    box.appendChild(span);
-  });
-}
-
 function render(rec) {
   document.getElementById("therapy").textContent = rec.therapy || "";
-  document.getElementById("profile").textContent = rec.profile_used || "";
 
   fillList("why", rec.why || []);
   fillList("next", rec.next_steps || []);
 
   const commentsBlock = document.getElementById("comments_block");
-  const basisBlock = document.getElementById("basis_block");
-
   const comments = rec.comments || [];
-  const basis = rec.basis || [];
 
   if (comments.length) {
     commentsBlock.hidden = false;
@@ -94,28 +69,48 @@ function render(rec) {
     commentsBlock.hidden = true;
   }
 
-  if (basis.length) {
-    basisBlock.hidden = false;
-    fillChips("basis", basis);
-  } else {
-    basisBlock.hidden = true;
-  }
-
   resultEl.hidden = false;
 }
 
 function applyCountryUIRules() {
   const country = document.getElementById("country").value;
-  const frcEl = document.getElementById("frc_available");
   const hint = document.getElementById("country_hint");
 
-  if (country === "JO") {
-    frcEl.checked = false;
-    frcEl.disabled = true;
-    hint.textContent = "Jordan: FRC (iGlarLixi) is treated as not available.";
+  if (country === "TR") {
+    hint.textContent =
+      "Turkey: when FRC is recommended and BMI is below 35 kg/m², reimbursement may be limited and treatment may be out-of-pocket.";
   } else {
-    frcEl.disabled = false;
     hint.textContent = "";
+  }
+}
+
+function applyRegimenUIRules() {
+  const regimen = getRegimen();
+
+  const onRapidWrap = document.getElementById("on_rapid_added_wrap");
+  const ppgWrap = document.getElementById("ppg_uncontrolled_wrap");
+  const hypoWrap = document.getElementById("recurrent_hypoglycemia_wrap");
+
+  onRapidWrap.hidden = true;
+  ppgWrap.hidden = true;
+  hypoWrap.hidden = true;
+
+  if (regimen === "none") {
+    return;
+  }
+
+  if (regimen === "basal") {
+    ppgWrap.hidden = false;
+    return;
+  }
+
+  if (regimen === "frc") {
+    onRapidWrap.hidden = false;
+    return;
+  }
+
+  if (regimen === "premix" || regimen === "bb") {
+    hypoWrap.hidden = false;
   }
 }
 
@@ -129,12 +124,10 @@ async function init() {
 
     statusEl.textContent = "Loading clinical engine…";
 
-    // Cache-busting to avoid stale engine.py
     const engineUrl = `py/engine.py?v=${Date.now()}`;
     const engineCode = await (await fetch(engineUrl)).text();
     pyodide.runPython(engineCode);
 
-    // Sanity check for JSON bridge
     pyodide.runPython("assert 'recommend_json' in globals()");
 
     statusEl.textContent = "Ready.";
@@ -145,6 +138,10 @@ async function init() {
 }
 
 document.getElementById("country").addEventListener("change", applyCountryUIRules);
+
+document.querySelectorAll('input[name="regimen"]').forEach((el) => {
+  el.addEventListener("change", applyRegimenUIRules);
+});
 
 document.getElementById("run").addEventListener("click", () => {
   if (!pyodide) {
@@ -161,6 +158,7 @@ document.getElementById("run").addEventListener("click", () => {
 
     const rec = JSON.parse(outJson);
     render(rec);
+    statusEl.textContent = "Recommendation generated.";
   } catch (e) {
     console.error(e);
     statusEl.textContent = "Run failed — open Console (F12) for details.";
@@ -168,4 +166,5 @@ document.getElementById("run").addEventListener("click", () => {
 });
 
 applyCountryUIRules();
+applyRegimenUIRules();
 init();
