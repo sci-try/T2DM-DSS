@@ -19,8 +19,14 @@
     }
     .nav a:hover { filter: brightness(0.98); }
 
-    .figure { border:1px solid var(--line); border-radius: var(--radius); background:#fff; padding:12px; overflow:auto; }
-    .figure img { width:100%; height:auto; display:block; }
+    .figure {
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background:#fff;
+      padding:12px;
+      overflow:auto;
+    }
+
     .caption { margin-top:8px; font-size:12px; color: var(--muted); }
 
     .doc h2 { margin-top: 16px; font-size: 16px; }
@@ -31,6 +37,10 @@
     .node { border-left: 3px solid rgba(31,58,138,.35); padding-left: 12px; margin: 12px 0; }
     .version { display:flex; gap:10px; flex-wrap:wrap; margin-top: 8px; color: var(--muted); font-size: 12px; }
     .pill { border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 10px; }
+
+    .mermaid {
+      min-width: 900px;
+    }
   </style>
 </head>
 
@@ -41,7 +51,7 @@
         <div class="brand__title">T2D Injectable Therapy CDS</div>
         <div class="brand__subtitle">Algorithm description (public page)</div>
       </div>
-      <div class="badge">Algorithm • v1</div>
+      <div class="badge">Algorithm • v2</div>
     </div>
   </header>
 
@@ -55,26 +65,96 @@
       <h1>Injectable therapy decision algorithm</h1>
 
       <p>
-        This page explains the decision logic used by the CDS prototype for adults with
-        <strong>type 2 diabetes (T2D)</strong>. The goal is transparency: the tool generates a recommendation
-        plus rationale and next steps.
+        This page describes the current decision logic used by the CDS prototype for adults with
+        <strong>type 2 diabetes (T2D)</strong>. The tool is designed as a practical,
+        reimbursement-oriented support algorithm for injectable therapy selection, intensification,
+        and simplification.
       </p>
 
       <div class="version">
-        <span class="pill"><strong>Algorithm version:</strong> v1 (MVP)</span>
+        <span class="pill"><strong>Algorithm version:</strong> v2</span>
         <span class="pill"><strong>Scope:</strong> first injectable, intensification, simplification</span>
+        <span class="pill"><strong>Countries:</strong> TR, LB, IQ</span>
         <span class="pill"><strong>Engine:</strong> <code>py/engine.py</code></span>
       </div>
 
       <hr class="sep" />
 
-      <h2>Decision tree (diagram)</h2>
+      <h2>Decision tree (Mermaid)</h2>
 
       <div class="figure">
-        <img src="assets/decision-tree.png" alt="Decision tree: T2D injectable therapy algorithm">
+        <div class="mermaid">
+flowchart TD
+
+    A[Start] --> C{Country}
+    C --> TR[Turkey]
+    C --> LB[Lebanon]
+    C --> IQ[Iraq]
+
+    TR --> S
+    LB --> S
+    IQ --> S
+
+    S{Catabolic symptoms<br/>or HbA1c ≥ 10%?}
+    S -->|Yes| SI[Start / intensify insulin<br/>severe hyperglycaemia]
+    S -->|No| F1
+
+    F1{On FRC + rapid insulin<br/>and target still unmet?}
+    F1 -->|Yes| BB[Intensify to basal-bolus<br/>or premixed insulin]
+    F1 -->|No| F2
+
+    F2{On FRC<br/>and target still unmet?}
+    F2 -->|Yes| RAPID[Add rapid-acting insulin to FRC<br/>may be off-label]
+    F2 -->|No| SIMP
+
+    SIMP{On basal-bolus or premix<br/>with recurrent hypoglycaemia?}
+    SIMP -->|Yes| SIMP2[Consider switch to FRC<br/>for simplification]
+    SIMP -->|No| BASAL
+
+    BASAL{On basal insulin<br/>and target unmet or PPG uncontrolled?}
+    BASAL -->|Yes| BASAL2[Switch basal insulin to FRC]
+    BASAL -->|No| FIRST
+
+    FIRST{Current HbA1c available?}
+    FIRST -->|Yes| TARGET
+    FIRST -->|No| BMI_FALLBACK
+
+    TARGET{HbA1c target provided?}
+    TARGET -->|Yes| GAP
+    TARGET -->|No| DEF7[Use default target = 7.0%] --> GAP
+
+    GAP{HbA1c gap < 2% above target?}
+    GAP -->|Yes| BMI1
+    GAP -->|No| FRCSTART1[Start FRC]
+
+    BMI1{BMI > 30?}
+    BMI1 -->|Yes| FRCSTART2[Start FRC]
+    BMI1 -->|No| BI1[Start basal insulin]
+
+    BMI_FALLBACK{BMI > 30?}
+    BMI_FALLBACK -->|Yes| FRCSTART3[Start FRC]
+    BMI_FALLBACK -->|No| BI2[Start basal insulin]
+
+    FRCSTART1 --> TRNOTE
+    FRCSTART2 --> TRNOTE
+    FRCSTART3 --> TRNOTE
+    BASAL2 --> TRNOTE
+    SIMP2 --> TRNOTE
+
+    TRNOTE{Turkey and BMI < 35?}
+    TRNOTE -->|Yes| NOTE[Add reimbursement note:<br/>FRC may be out-of-pocket]
+    TRNOTE -->|No| END1[Final recommendation]
+    NOTE --> END1
+
+    BI1 --> END2[Final recommendation]
+    BI2 --> END3[Final recommendation]
+    RAPID --> END4[Final recommendation]
+    BB --> END5[Final recommendation]
+    SI --> END6[Final recommendation]
+        </div>
         <div class="caption">
-          Figure. Decision-tree overview. Country selection is the first node; Jordan disables FRC;
-          Turkey shows reimbursement note for BMI &lt; 35 when FRC is recommended.
+          Figure. Current routing logic of the prototype. FRC is assumed available in Turkey, Lebanon, and Iraq.
+          If HbA1c target is missing but current HbA1c is available, the engine uses a default target of 7.0%.
         </div>
       </div>
 
@@ -83,82 +163,123 @@
       <h2>Textual description of the algorithm</h2>
 
       <div class="node">
-        <h3>1) Country selection (first node)</h3>
+        <h3>1) Country selection</h3>
         <p>
-          The algorithm first applies a <strong>country profile</strong> (RU, TR, LB, JO, IQ, EU, US, OTHER).
-          This profile may affect availability assumptions and country-specific notes.
+          The current engine supports only <strong>Turkey (TR)</strong>, <strong>Lebanon (LB)</strong>, and
+          <strong>Iraq (IQ)</strong>. In this version, <strong>FRC is treated as available by default</strong>
+          in all three countries.
         </p>
-        <ul>
-          <li><strong>Jordan (JO):</strong> FRC (iGlarLixi) is treated as <strong>not available</strong>.</li>
-          <li><strong>Turkey (TR):</strong> if FRC is recommended and BMI &lt; 35, show a comment:
-            “reimbursement often requires BMI ≥35; otherwise may be out-of-pocket” (comment only).
-          </li>
-        </ul>
+        <p>
+          For <strong>Turkey</strong>, if the final recommendation is FRC and <strong>BMI &lt; 35 kg/m²</strong>,
+          the engine adds a reimbursement note indicating that treatment may be partially or fully
+          <strong>out-of-pocket</strong> depending on local access conditions.
+        </p>
       </div>
 
       <div class="node">
-        <h3>2) Severe hyperglycaemia</h3>
+        <h3>2) Severe hyperglycaemia override</h3>
         <p>
-          <strong>If</strong> catabolic symptoms are present <strong>OR</strong> HbA1c ≥ 10%,
-          recommend <strong>insulin start or urgent insulin intensification</strong>.
+          If <strong>catabolic symptoms</strong> are present or <strong>HbA1c ≥ 10%</strong>,
+          the algorithm immediately recommends <strong>start / intensify insulin</strong>.
         </p>
         <p class="caption">
-          Rationale: rapid glycaemic control is prioritised in severe hyperglycaemia/catabolic context to reduce acute risk.
+          This is an override step: severe hyperglycaemia takes priority over all other routing branches.
         </p>
       </div>
 
       <div class="node">
-        <h3>3) Simplification / de-intensification (complex insulin regimens)</h3>
+        <h3>3) Intensification on FRC</h3>
         <p>
-          <strong>If</strong> the patient is on <strong>basal-bolus</strong> or <strong>premix</strong> insulin
-          and has <strong>recurrent hypoglycaemia</strong> or <strong>high regimen complexity/adherence issues</strong>:
+          If the patient is already on <strong>FRC</strong> and glycaemic target remains unmet,
+          the algorithm recommends <strong>adding rapid-acting insulin</strong>.
         </p>
-        <ul>
-          <li><strong>If FRC is available</strong> (and not Jordan) → <strong>switch to FRC (iGlarLixi)</strong>.</li>
-          <li><strong>Otherwise</strong> → simplify within insulin options.</li>
-        </ul>
+        <p>
+          If the patient is already on <strong>FRC + rapid-acting insulin</strong> and still uncontrolled,
+          the next step is <strong>intensification to basal-bolus or premixed insulin</strong>.
+        </p>
         <p class="caption">
-          Rationale: de-intensification can be appropriate when hypoglycaemia risk or treatment burden outweighs benefit.
+          A note is added that adding rapid-acting insulin to FRC may be <strong>off-label</strong>,
+          depending on local label and market.
         </p>
       </div>
 
       <div class="node">
-        <h3>4) Intensification on basal insulin</h3>
-        <p><strong>If</strong> the patient is on <strong>basal insulin</strong> and HbA1c remains above target:</p>
-        <ol>
-          <li><strong>If GLP-1 RA is available</strong> → add GLP-1 RA to basal insulin.</li>
-          <li><strong>Else if FRC is available</strong> (and not Jordan) → switch basal insulin to FRC (iGlarLixi).</li>
-          <li><strong>Else</strong> → add prandial insulin (basal-plus strategy, stepwise escalation).</li>
-        </ol>
+        <h3>4) Simplification from complex insulin regimens</h3>
+        <p>
+          If the patient is on <strong>basal-bolus</strong> or <strong>premixed insulin</strong>
+          and has <strong>recurrent hypoglycaemia</strong>, the algorithm recommends:
+          <strong>consider switch to FRC for simplification</strong>.
+        </p>
         <p class="caption">
-          Rationale: GLP-1 RA is typically preferred before adding mealtime insulin when feasible; FRC provides basal+postprandial control with one injection.
+          In this version, regimen complexity is treated as intrinsically relevant to basal-bolus and premix,
+          so a separate complexity checkbox is no longer used.
         </p>
       </div>
 
       <div class="node">
-        <h3>5) First injectable selection (no current injectable therapy)</h3>
-
-        <p><strong>A. Cardiorenal disease (ASCVD / HF / CKD):</strong></p>
+        <h3>5) Intensification on basal insulin</h3>
+        <p>
+          If the patient is on <strong>basal insulin</strong> and either:
+        </p>
         <ul>
-          <li>If GLP-1 RA available → <strong>start GLP-1 RA</strong>.</li>
-          <li>Otherwise → <strong>start basal insulin</strong>.</li>
+          <li><strong>HbA1c remains above target</strong>, or</li>
+          <li><strong>Postprandial glucose is uncontrolled</strong>,</li>
+        </ul>
+        <p>
+          then the algorithm recommends: <strong>switch basal insulin to FRC</strong>.
+        </p>
+        <p class="caption">
+          This branch captures both overall inadequate control and the common scenario of acceptable fasting control
+          with persistent postprandial hyperglycaemia.
+        </p>
+      </div>
+
+      <div class="node">
+        <h3>6) First injectable selection</h3>
+
+        <p>
+          If the patient is not already routed into a more advanced intensification or simplification branch,
+          the engine uses a <strong>gap-based approach</strong> for initial injectable selection.
+        </p>
+
+        <p><strong>A. If current HbA1c and target are both available:</strong></p>
+        <ul>
+          <li>Calculate <strong>gap = HbA1c − HbA1c target</strong>.</li>
         </ul>
 
-        <p><strong>B. Obesity-driven approach (BMI ≥ 30):</strong></p>
+        <p><strong>B. If current HbA1c is available but target is not provided:</strong></p>
         <ul>
-          <li>If GLP-1 RA available → <strong>start GLP-1 RA</strong>.</li>
+          <li>Use a <strong>default HbA1c target of 7.0%</strong>.</li>
+          <li>Then calculate the gap against 7.0%.</li>
         </ul>
 
-        <p><strong>C. Higher HbA1c without catabolic symptoms:</strong></p>
+        <p><strong>C. If gap &lt; 2% above target:</strong></p>
         <ul>
-          <li>If HbA1c &gt; 9 and FRC available (not Jordan) → <strong>start FRC (iGlarLixi)</strong>.</li>
+          <li>If <strong>BMI ≤ 30 kg/m²</strong> → <strong>start basal insulin</strong>.</li>
+          <li>If <strong>BMI &gt; 30 kg/m²</strong> → <strong>start FRC</strong>.</li>
         </ul>
 
-        <p><strong>D. Default rule:</strong></p>
+        <p><strong>D. If gap ≥ 2% above target:</strong></p>
         <ul>
-          <li>If GLP-1 RA available → <strong>start GLP-1 RA</strong>.</li>
-          <li>Otherwise → <strong>start basal insulin</strong>.</li>
+          <li><strong>Start FRC</strong>, regardless of BMI.</li>
         </ul>
+
+        <p><strong>E. If current HbA1c is not available:</strong></p>
+        <ul>
+          <li>If <strong>BMI &gt; 30 kg/m²</strong> → <strong>start FRC</strong>.</li>
+          <li>If <strong>BMI ≤ 30 kg/m²</strong> or BMI is not available → <strong>start basal insulin</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="node">
+        <h3>7) Optional comments outside the main routing tree</h3>
+        <p>
+          The algorithm may add a note that <strong>standalone GLP-1 RA</strong> could be discussed as an
+          <strong>optional out-of-pocket consideration</strong>, but this does not affect the main decision tree.
+        </p>
+        <p class="caption">
+          This tool is intentionally reimbursement-oriented: standalone GLP-1 RA is not used as a routing branch in this version.
+        </p>
       </div>
 
       <hr class="sep" />
@@ -166,9 +287,19 @@
       <h2>Disclaimer</h2>
       <p class="caption">
         This tool is a clinical decision-support prototype for internal evaluation. It does not replace clinical judgement,
-        local guidance, institutional policies, or product labels. Always individualise therapy.
+        local guidance, institutional policies, or product labels. Always individualise therapy. Off-label situations,
+        reimbursement restrictions, and local access conditions should be reviewed before implementation.
       </p>
     </section>
   </main>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "default",
+      securityLevel: "loose"
+    });
+  </script>
 </body>
 </html>
