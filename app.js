@@ -1,18 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  app.js  –  T2D Injectable Therapy CDS
+//  app.js  –  T2D Injectable Therapy CDS  v3
 //  Supports: Turkey (TR) · Iraq (IQ)
 //  Matches:  index.html v3  ·  py/engine.py v3
 //
-//  This file is the SOLE owner of all UI-show/hide logic for index.html.
+//  SOLE owner of all UI show/hide logic for index.html.
 //  index.html contains NO inline <script> UI code.
 // ─────────────────────────────────────────────────────────────────────────────
 
 "use strict";
 
-// ── Module-level state ────────────────────────────────────────────────────────
 let pyodide = null;
 
-// ── DOM refs ──────────────────────────────────────────────────────────────────
 const statusEl  = document.getElementById("status");
 const resultEl  = document.getElementById("result");
 const countryEl = document.getElementById("country");
@@ -21,7 +19,6 @@ const countryEl = document.getElementById("country");
 //  INPUT HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
 
-/** Return a finite number or null from a numeric input field. */
 function numOrNull(id) {
   const el = document.getElementById(id);
   if (!el) return null;
@@ -31,37 +28,25 @@ function numOrNull(id) {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Return the checked state of a checkbox, safely. */
 function boolVal(id) {
   const el = document.getElementById(id);
   return el ? el.checked : false;
 }
 
-/** Active country code. */
 function getCountry() {
   return countryEl ? countryEl.value : "TR";
 }
 
-/**
- * Selected regimen value for the active country.
- *   Turkey → radio group  name="regimen"
- *   Iraq   → radio group  name="regimen_iq"
- */
 function getRegimen() {
   const name = getCountry() === "IQ" ? "regimen_iq" : "regimen";
   const el   = document.querySelector(`input[name="${name}"]:checked`);
   return el ? el.value : "none";
 }
 
-/**
- * Build the inputs object for the Python engine.
- * Iraq and Turkey use different regimen flag sets.
- */
 function getInputs() {
   const country = getCountry();
   const regimen = getRegimen();
 
-  // Shared fields
   const base = {
     country,
     hba1c:              numOrNull("hba1c"),
@@ -70,61 +55,68 @@ function getInputs() {
     symptoms_catabolic: boolVal("symptoms_catabolic"),
   };
 
-  // ── Iraq ──────────────────────────────────────────────────────────────────
   if (country === "IQ") {
     return {
       ...base,
-      on_basal_only:    regimen === "basal_only",
-      on_glp1_alone:    regimen === "glp1_alone",
-      on_bi_glp1:       regimen === "bi_glp1",
-      on_bi_glp1_rapid: regimen === "bi_glp1_rapid",
-      on_premix:        regimen === "premix",
-      on_basal_bolus:   regimen === "bb",
+      on_basal_only:          regimen === "basal_only",
+      on_glp1_alone:          regimen === "glp1_alone",
+      on_bi_glp1:             regimen === "bi_glp1",
+      on_bi_glp1_rapid:       regimen === "bi_glp1_rapid",
+      on_premix:              regimen === "premix",
+      on_basal_bolus:         regimen === "bb",
       recurrent_hypoglycemia: boolVal("recurrent_hypoglycemia"),
     };
   }
 
-  // ── Turkey (legacy flag set, unchanged) ───────────────────────────────────
+  // Turkey
   return {
     ...base,
-    on_basal_insulin: regimen === "basal",
-    on_frc:           regimen === "frc",
-    on_premix:        regimen === "premix",
-    on_basal_bolus:   regimen === "bb",
+    on_basal_insulin:       regimen === "basal",
+    on_frc:                 regimen === "frc",
+    on_premix:              regimen === "premix",
+    on_basal_bolus:         regimen === "bb",
     recurrent_hypoglycemia: boolVal("recurrent_hypoglycemia"),
     ppg_uncontrolled:       boolVal("ppg_uncontrolled"),
   };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  UI RULES  –  show / hide contextual fields
+//  UI RULES
 // ══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Show the correct regimen radio group; hide and reset the other.
- * Resetting prevents stale checked values bleeding into getInputs().
+ * Show the correct regimen set; FORCE-hide the other.
+ * Uses both the `hidden` attribute and inline style to ensure
+ * no browser-cache or CSS conflict can show both sets at once.
  */
 function applyCountryRegimenSets() {
   const country   = getCountry();
   const regimenTR = document.getElementById("regimen_tr");
   const regimenIQ = document.getElementById("regimen_iq");
 
-  if (regimenTR) regimenTR.hidden = (country === "IQ");
-  if (regimenIQ) regimenIQ.hidden = (country !== "IQ");
+  const showTR = country !== "IQ";
+  const showIQ = country === "IQ";
 
-  // Reset the hidden group to "none"
-  if (country === "IQ") {
-    const el = document.querySelector('input[name="regimen"][value="none"]');
+  if (regimenTR) {
+    regimenTR.hidden = !showTR;
+    regimenTR.style.display = showTR ? "" : "none";
+  }
+  if (regimenIQ) {
+    regimenIQ.hidden = !showIQ;
+    regimenIQ.style.display = showIQ ? "" : "none";
+  }
+
+  // Reset the now-hidden group to "none" so stale values
+  // never bleed into getInputs()
+  if (showTR) {
+    const el = document.querySelector('input[name="regimen_iq"][value="none"]');
     if (el) el.checked = true;
   } else {
-    const el = document.querySelector('input[name="regimen_iq"][value="none"]');
+    const el = document.querySelector('input[name="regimen"][value="none"]');
     if (el) el.checked = true;
   }
 }
 
-/**
- * Country hint and regimen hint text.
- */
 function applyHints() {
   const country     = getCountry();
   const countryHint = document.getElementById("country_hint");
@@ -134,8 +126,8 @@ function applyHints() {
     countryHint.textContent = country === "TR"
       ? "Turkey: when FRC is recommended and BMI is below 35 kg/m², "
         + "reimbursement may be limited and treatment may be out-of-pocket."
-      : "Iraq: gap- and BMI-based algorithm. "
-        + "Select the patient's current regimen to route intensification correctly.";
+      : "Iraq: routing is based on how far HbA1c is above the individualised "
+        + "target and BMI. Select the current regimen to route intensification correctly.";
   }
 
   if (regimenHint) {
@@ -151,7 +143,7 @@ function applyHints() {
  *
  * Iraq:
  *   recurrent_hypoglycemia → premix or bb only
- *   ppg_uncontrolled       → never (not part of IQ algorithm)
+ *   ppg_uncontrolled       → never
  *
  * Turkey:
  *   ppg_uncontrolled       → basal only
@@ -163,24 +155,40 @@ function applyRegimenUIRules() {
   const ppgWrap  = document.getElementById("ppg_uncontrolled_wrap");
   const hypoWrap = document.getElementById("recurrent_hypoglycemia_wrap");
 
-  // Default: hide both
-  if (ppgWrap)  ppgWrap.hidden  = true;
-  if (hypoWrap) hypoWrap.hidden = true;
+  // Force-hide both first
+  if (ppgWrap) {
+    ppgWrap.hidden       = true;
+    ppgWrap.style.display = "none";
+  }
+  if (hypoWrap) {
+    hypoWrap.hidden       = true;
+    hypoWrap.style.display = "none";
+  }
 
   if (country === "IQ") {
-    if (hypoWrap)
-      hypoWrap.hidden = !(regimen === "premix" || regimen === "bb");
+    const showHypo = regimen === "premix" || regimen === "bb";
+    if (hypoWrap) {
+      hypoWrap.hidden       = !showHypo;
+      hypoWrap.style.display = showHypo ? "" : "none";
+    }
     // ppg_uncontrolled stays hidden for IQ
+
   } else {
     // Turkey
-    if (ppgWrap)
-      ppgWrap.hidden  = (regimen !== "basal");
-    if (hypoWrap)
-      hypoWrap.hidden = !(regimen === "premix" || regimen === "bb");
+    const showPPG  = regimen === "basal";
+    const showHypo = regimen === "premix" || regimen === "bb";
+
+    if (ppgWrap) {
+      ppgWrap.hidden       = !showPPG;
+      ppgWrap.style.display = showPPG ? "" : "none";
+    }
+    if (hypoWrap) {
+      hypoWrap.hidden       = !showHypo;
+      hypoWrap.style.display = showHypo ? "" : "none";
+    }
   }
 }
 
-/** Master UI refresh — single call covers all three concerns. */
 function refreshUI() {
   applyCountryRegimenSets();
   applyHints();
@@ -212,15 +220,19 @@ function render(rec) {
   const commentsBlock = document.getElementById("comments_block");
   const comments      = rec.comments || [];
   if (commentsBlock) {
-    commentsBlock.hidden = comments.length === 0;
+    commentsBlock.hidden       = comments.length === 0;
+    commentsBlock.style.display = comments.length === 0 ? "none" : "";
     fillList("comments", comments);
   }
 
-  if (resultEl) resultEl.hidden = false;
+  if (resultEl) {
+    resultEl.hidden       = false;
+    resultEl.style.display = "";
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  PYODIDE INIT
+//  PYODIDE
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function init() {
@@ -229,16 +241,14 @@ async function init() {
     pyodide = await loadPyodide({
       indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/",
     });
-
     statusEl.textContent = "Loading clinical engine…";
-    const engineCode = await (
+    const code = await (
       await fetch(`py/engine.py?v=${Date.now()}`)
     ).text();
-    pyodide.runPython(engineCode);
+    pyodide.runPython(code);
     pyodide.runPython(
       "assert 'recommend_json' in globals(), 'recommend_json missing'"
     );
-
     statusEl.textContent = "Ready.";
   } catch (e) {
     console.error("[CDS init]", e);
@@ -247,7 +257,7 @@ async function init() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  RUN BUTTON
+//  RUN
 // ══════════════════════════════════════════════════════════════════════════════
 
 document.getElementById("run").addEventListener("click", () => {
@@ -256,10 +266,9 @@ document.getElementById("run").addEventListener("click", () => {
     return;
   }
   try {
-    const inputs  = getInputs();
-    pyodide.globals.set("JS_INPUTS_JSON", JSON.stringify(inputs));
-    const outJson = pyodide.runPython("recommend_json(JS_INPUTS_JSON)");
-    render(JSON.parse(outJson));
+    pyodide.globals.set("JS_INPUTS_JSON", JSON.stringify(getInputs()));
+    const rec = JSON.parse(pyodide.runPython("recommend_json(JS_INPUTS_JSON)"));
+    render(rec);
     statusEl.textContent = "Recommendation generated.";
   } catch (e) {
     console.error("[CDS run]", e);
@@ -268,18 +277,14 @@ document.getElementById("run").addEventListener("click", () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  EVENT WIRING
+//  EVENT WIRING  — each group wired independently, no cross-firing
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Country change
 countryEl.addEventListener("change", refreshUI);
 
-// Turkey regimen radios
 document.querySelectorAll('input[name="regimen"]').forEach((el) =>
   el.addEventListener("change", applyRegimenUIRules)
 );
-
-// Iraq regimen radios
 document.querySelectorAll('input[name="regimen_iq"]').forEach((el) =>
   el.addEventListener("change", applyRegimenUIRules)
 );
@@ -288,5 +293,5 @@ document.querySelectorAll('input[name="regimen_iq"]').forEach((el) =>
 //  BOOTSTRAP
 // ══════════════════════════════════════════════════════════════════════════════
 
-refreshUI();   // set correct initial state before Pyodide loads
+refreshUI();
 init();
