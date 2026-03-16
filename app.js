@@ -1,19 +1,26 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  app.js  –  T2D Injectable Therapy CDS  v3
 //  Supports: Turkey (TR) · Iraq (IQ)
-//  Matches:  index.html v3  ·  py/engine.py v3
 //
-//  SOLE owner of all UI show/hide logic for index.html.
-//  index.html contains NO inline <script> UI code.
+//  Visibility is controlled exclusively via style.display.
+//  index.html sets the correct initial state via inline style="display:..."
+//  so nothing is ever shown before this script runs.
 // ─────────────────────────────────────────────────────────────────────────────
 
 "use strict";
 
 let pyodide = null;
 
+// ── DOM refs ──────────────────────────────────────────────────────────────────
 const statusEl  = document.getElementById("status");
 const resultEl  = document.getElementById("result");
 const countryEl = document.getElementById("country");
+
+// ── Visibility helper — single source of truth ───────────────────────────────
+function show(el) { if (el) el.style.display = ""; }
+function hide(el) { if (el) el.style.display = "none"; }
+function showById(id) { show(document.getElementById(id)); }
+function hideById(id) { hide(document.getElementById(id)); }
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  INPUT HELPERS
@@ -68,7 +75,6 @@ function getInputs() {
     };
   }
 
-  // Turkey
   return {
     ...base,
     on_basal_insulin:       regimen === "basal",
@@ -84,36 +90,23 @@ function getInputs() {
 //  UI RULES
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Show the correct regimen set; FORCE-hide the other.
- * Uses both the `hidden` attribute and inline style to ensure
- * no browser-cache or CSS conflict can show both sets at once.
- */
 function applyCountryRegimenSets() {
   const country   = getCountry();
   const regimenTR = document.getElementById("regimen_tr");
   const regimenIQ = document.getElementById("regimen_iq");
 
-  const showTR = country !== "IQ";
-  const showIQ = country === "IQ";
-
-  if (regimenTR) {
-    regimenTR.hidden = !showTR;
-    regimenTR.style.display = showTR ? "" : "none";
-  }
-  if (regimenIQ) {
-    regimenIQ.hidden = !showIQ;
-    regimenIQ.style.display = showIQ ? "" : "none";
-  }
-
-  // Reset the now-hidden group to "none" so stale values
-  // never bleed into getInputs()
-  if (showTR) {
-    const el = document.querySelector('input[name="regimen_iq"][value="none"]');
-    if (el) el.checked = true;
+  if (country === "IQ") {
+    hide(regimenTR);
+    show(regimenIQ);
+    // Reset TR group so stale value never reaches getInputs()
+    const noneTR = document.querySelector('input[name="regimen"][value="none"]');
+    if (noneTR) noneTR.checked = true;
   } else {
-    const el = document.querySelector('input[name="regimen"][value="none"]');
-    if (el) el.checked = true;
+    show(regimenTR);
+    hide(regimenIQ);
+    // Reset IQ group
+    const noneIQ = document.querySelector('input[name="regimen_iq"][value="none"]');
+    if (noneIQ) noneIQ.checked = true;
   }
 }
 
@@ -138,53 +131,28 @@ function applyHints() {
   }
 }
 
-/**
- * Show / hide contextual checkboxes.
- *
- * Iraq:
- *   recurrent_hypoglycemia → premix or bb only
- *   ppg_uncontrolled       → never
- *
- * Turkey:
- *   ppg_uncontrolled       → basal only
- *   recurrent_hypoglycemia → premix or bb only
- */
 function applyRegimenUIRules() {
-  const country  = getCountry();
-  const regimen  = getRegimen();
-  const ppgWrap  = document.getElementById("ppg_uncontrolled_wrap");
-  const hypoWrap = document.getElementById("recurrent_hypoglycemia_wrap");
+  const country = getCountry();
+  const regimen = getRegimen();
 
-  // Force-hide both first
-  if (ppgWrap) {
-    ppgWrap.hidden       = true;
-    ppgWrap.style.display = "none";
-  }
-  if (hypoWrap) {
-    hypoWrap.hidden       = true;
-    hypoWrap.style.display = "none";
-  }
+  // Hide all contextual checkboxes first
+  hideById("ppg_uncontrolled_wrap");
+  hideById("recurrent_hypoglycemia_wrap");
 
   if (country === "IQ") {
-    const showHypo = regimen === "premix" || regimen === "bb";
-    if (hypoWrap) {
-      hypoWrap.hidden       = !showHypo;
-      hypoWrap.style.display = showHypo ? "" : "none";
+    // Hypoglycaemia only relevant on premix / bb
+    if (regimen === "premix" || regimen === "bb") {
+      showById("recurrent_hypoglycemia_wrap");
     }
-    // ppg_uncontrolled stays hidden for IQ
+    // ppg_uncontrolled: not part of Iraq algorithm — stays hidden
 
   } else {
     // Turkey
-    const showPPG  = regimen === "basal";
-    const showHypo = regimen === "premix" || regimen === "bb";
-
-    if (ppgWrap) {
-      ppgWrap.hidden       = !showPPG;
-      ppgWrap.style.display = showPPG ? "" : "none";
+    if (regimen === "basal") {
+      showById("ppg_uncontrolled_wrap");
     }
-    if (hypoWrap) {
-      hypoWrap.hidden       = !showHypo;
-      hypoWrap.style.display = showHypo ? "" : "none";
+    if (regimen === "premix" || regimen === "bb") {
+      showById("recurrent_hypoglycemia_wrap");
     }
   }
 }
@@ -220,15 +188,15 @@ function render(rec) {
   const commentsBlock = document.getElementById("comments_block");
   const comments      = rec.comments || [];
   if (commentsBlock) {
-    commentsBlock.hidden       = comments.length === 0;
-    commentsBlock.style.display = comments.length === 0 ? "none" : "";
-    fillList("comments", comments);
+    if (comments.length) {
+      show(commentsBlock);
+      fillList("comments", comments);
+    } else {
+      hide(commentsBlock);
+    }
   }
 
-  if (resultEl) {
-    resultEl.hidden       = false;
-    resultEl.style.display = "";
-  }
+  if (resultEl) show(resultEl);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -277,7 +245,7 @@ document.getElementById("run").addEventListener("click", () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  EVENT WIRING  — each group wired independently, no cross-firing
+//  EVENT WIRING
 // ══════════════════════════════════════════════════════════════════════════════
 
 countryEl.addEventListener("change", refreshUI);
@@ -290,7 +258,7 @@ document.querySelectorAll('input[name="regimen_iq"]').forEach((el) =>
 );
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  BOOTSTRAP
+//  BOOTSTRAP — refreshUI() runs synchronously before init() starts loading
 // ══════════════════════════════════════════════════════════════════════════════
 
 refreshUI();
