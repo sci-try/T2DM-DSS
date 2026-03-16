@@ -30,7 +30,6 @@
 
       <div class="form-grid">
 
-        <!-- Country -->
         <div class="field">
           <label for="country">Country profile</label>
           <select id="country">
@@ -40,22 +39,22 @@
           <div class="hint" id="country_hint"></div>
         </div>
 
-        <!-- HbA1c -->
         <div class="field">
           <label for="hba1c">HbA1c (%)</label>
           <input id="hba1c" type="number" step="0.1" min="4" max="20"
                  placeholder="e.g., 9.2" />
         </div>
 
-        <!-- HbA1c target -->
         <div class="field">
           <label for="hba1c_target">HbA1c target (%)</label>
           <input id="hba1c_target" type="number" step="0.1" min="4" max="10"
                  placeholder="e.g., 7.0" />
-          <div class="hint">Optional — defaults to 7.0% if not provided.</div>
+          <div class="hint">
+            Optional — defaults to 7.0% if not provided.
+            The gap (current HbA1c − target) drives routing.
+          </div>
         </div>
 
-        <!-- BMI -->
         <div class="field">
           <label for="bmi">BMI (kg/m²)</label>
           <input id="bmi" type="number" step="0.1" min="10" max="80"
@@ -66,7 +65,6 @@
 
       <hr class="sep" />
 
-      <!-- ── Clinical status ── -->
       <h3>Clinical status</h3>
       <div class="check-grid">
 
@@ -75,13 +73,11 @@
           Catabolic symptoms / symptomatic hyperglycaemia
         </label>
 
-        <!-- Turkey-only contextual flags (hidden for IQ) -->
         <label class="check" id="ppg_uncontrolled_wrap" hidden>
           <input id="ppg_uncontrolled" type="checkbox" />
           Postprandial glucose uncontrolled
         </label>
 
-        <!-- Shown for both countries when relevant regimen is selected -->
         <label class="check" id="recurrent_hypoglycemia_wrap" hidden>
           <input id="recurrent_hypoglycemia" type="checkbox" />
           Recurrent hypoglycaemia
@@ -91,10 +87,9 @@
 
       <hr class="sep" />
 
-      <!-- ── Current injectable regimen ── -->
       <h3>Current injectable regimen</h3>
 
-      <!-- Turkey regimen set (shown when TR selected) -->
+      <!-- Turkey regimen (visible when TR selected) -->
       <div id="regimen_tr" class="radio-grid">
         <label class="radio">
           <input type="radio" name="regimen" value="none" checked />
@@ -118,7 +113,7 @@
         </label>
       </div>
 
-      <!-- Iraq regimen set (shown when IQ selected) -->
+      <!-- Iraq regimen (visible when IQ selected) -->
       <div id="regimen_iq" class="radio-grid" hidden>
         <label class="radio">
           <input type="radio" name="regimen_iq" value="none" checked />
@@ -150,18 +145,14 @@
         </label>
       </div>
 
-      <div class="hint" id="regimen_hint">
-        Iraq logic follows the national injectable algorithm (gap- and BMI-based).
-        Turkey logic is FRC/reimbursement-oriented.
-      </div>
+      <div class="hint" id="regimen_hint"></div>
 
       <div class="actions">
         <button id="run" class="btn">Generate recommendation</button>
         <div id="status" class="status">Not initialized</div>
       </div>
-    </section><!-- /inputs card -->
+    </section>
 
-    <!-- ── Result card ── -->
     <section class="card" id="result" hidden>
       <h2>Recommendation</h2>
 
@@ -193,74 +184,6 @@
 
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
   <script src="app.js"></script>
-
-  <script>
-    // ── UI controller ────────────────────────────────────────────────────────
-    const countryEl   = document.getElementById("country");
-    const regimenTR   = document.getElementById("regimen_tr");
-    const regimenIQ   = document.getElementById("regimen_iq");
-    const regimenHint = document.getElementById("regimen_hint");
-    const ppgWrap     = document.getElementById("ppg_uncontrolled_wrap");
-    const hypoWrap    = document.getElementById("recurrent_hypoglycemia_wrap");
-    const countryHint = document.getElementById("country_hint");
-
-    // Iraq-specific contextual flags shown per regimen selection
-    const IQ_HYPO_REGIMENS = new Set(["premix", "bb"]);
-
-    function applyCountryUI() {
-      const c = countryEl.value;
-
-      // Show/hide regimen sets
-      regimenTR.hidden = (c === "IQ");
-      regimenIQ.hidden = (c !== "IQ");
-
-      // PPG checkbox: Turkey only (relevant for basal insulin on TR)
-      ppgWrap.hidden = (c !== "TR");
-
-      // Country hint
-      if (c === "IQ") {
-        countryHint.textContent =
-          "Iraq algorithm: gap- and BMI-based routing with GLP-1 RA as a primary option.";
-        regimenHint.textContent =
-          "Select the patient's current injectable regimen to route intensification correctly.";
-      } else {
-        countryHint.textContent =
-          "Turkey: FRC-oriented algorithm; reimbursement note added when BMI < 35.";
-        regimenHint.textContent =
-          "Turkey logic is FRC/reimbursement-oriented. "
-          + "Standalone GLP-1 RA appears only as an optional note.";
-      }
-
-      applyRegimenUI();
-    }
-
-    function applyRegimenUI() {
-      const c = countryEl.value;
-      if (c === "IQ") {
-        const sel = document.querySelector('input[name="regimen_iq"]:checked');
-        const val = sel ? sel.value : "none";
-        // Show hypoglycaemia checkbox only for premix / bb regimens
-        hypoWrap.hidden = !IQ_HYPO_REGIMENS.has(val);
-      } else {
-        // Turkey: show hypo for premix / bb
-        const sel = document.querySelector('input[name="regimen"]:checked');
-        const val = sel ? sel.value : "none";
-        hypoWrap.hidden = !(val === "premix" || val === "bb");
-      }
-    }
-
-    // Event listeners
-    countryEl.addEventListener("change", applyCountryUI);
-
-    document.querySelectorAll('input[name="regimen"]').forEach(r =>
-      r.addEventListener("change", applyRegimenUI)
-    );
-    document.querySelectorAll('input[name="regimen_iq"]').forEach(r =>
-      r.addEventListener("change", applyRegimenUI)
-    );
-
-    // Initial render
-    applyCountryUI();
-  </script>
+  <!-- NO inline UI script — app.js owns all UI logic -->
 </body>
 </html>
