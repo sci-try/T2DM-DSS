@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-v="3">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -41,8 +41,6 @@
       border:1px solid var(--line); background:#fff;
       border-radius:999px; padding:6px 10px;
     }
-
-    /* ── Tab bar ── */
     .tab-bar {
       display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;
     }
@@ -55,13 +53,8 @@
     .tab-btn.active {
       background:var(--accent); color:#fff; border-color:var(--accent);
     }
-
-    /* Tab panels — hidden by default; shown by JS (not CSS display:none)
-       so Mermaid can measure them before rendering */
     .tab-panel { display:none; }
     .tab-panel.active { display:block; }
-
-    /* Mermaid container — wide enough for complex diagrams */
     .mermaid { min-width: 960px; }
   </style>
 </head>
@@ -100,9 +93,6 @@
 
       <hr class="sep" />
 
-      <!-- ══════════════════════════════════════════════════════════════════ -->
-      <!--  TAB BAR                                                          -->
-      <!-- ══════════════════════════════════════════════════════════════════ -->
       <div class="tab-bar">
         <button class="tab-btn active" data-tab="iq">Iraq (IQ)</button>
         <button class="tab-btn"        data-tab="tr">Turkey (TR)</button>
@@ -121,32 +111,32 @@ flowchart TD
 
     START([Initiate or intensify\ninjectable therapy]) --> SEV
 
-    SEV{Catabolic symptoms\nor HbA1c ge 10 pct?}
+    SEV{Catabolic symptoms\nor HbA1c 10% or above?}
     SEV -->|Yes| INSULIN[Start / intensify insulin\nsevere hyperglycaemia]
     SEV -->|No| REG
 
     REG{Current regimen?}
-    REG -->|BI max + GLP-1 RA\n+ Rapid — target unmet| FINAL
-    REG -->|BI + GLP-1 RA\n— target unmet| RAPID2
-    REG -->|GLP-1 RA alone\n— target unmet| RAPID2
-    REG -->|Basal insulin alone\n— target unmet| COMBO1
-    REG -->|None / first injectable| GAP
+    REG -->|BI max + GLP-1 RA\n+ Rapid - target unmet| FINAL
+    REG -->|BI + GLP-1 RA\n- target unmet| RAPID2
+    REG -->|GLP-1 RA alone\n- target unmet| RAPID2
+    REG -->|Basal insulin alone\n- target unmet| COMBO1
+    REG -->|None / first injectable| ASSESS
 
     FINAL[Intensify insulin:\nBasal-bolus OR Premixed insulin]
     RAPID2[BI max dose + GLP-1 RA\n+ Rapid-acting insulin]
     COMBO1[BI + GLP-1 RA\nFRC preferably or separately]
 
-    GAP{HbA1c gap\nvs individualised target}
-    GAP -->|Gap less than 2 pct| BMI_A
-    GAP -->|Gap 2 pct or more| BMI_B
+    ASSESS{HbA1c vs\nindividualised target}
+    ASSESS -->|Less than 2% above target| BMI_A
+    ASSESS -->|2% or more above target| BMI_B
 
     BMI_A{BMI}
-    BMI_A -->|le 30| BI_ALONE[Basal insulin\nand titration]
-    BMI_A -->|gt 30| GLP1_OR[GLP-1 RA alone\nOR BI + GLP-1 RA\nFRC or separately]
+    BMI_A -->|30 or below| BI_ALONE[Basal insulin\nand titration]
+    BMI_A -->|above 30| GLP1_OR[GLP-1 RA alone\nOR BI + GLP-1 RA\nFRC or separately]
 
     BMI_B{BMI}
-    BMI_B -->|le 30| COMBO_B[BI + GLP-1 RA\nFRC or separately\nOR Premix agents]
-    BMI_B -->|gt 30| COMBO_C[BI + GLP-1 RA\nFRC or separately]
+    BMI_B -->|30 or below| COMBO_B[BI + GLP-1 RA\nFRC or separately\nOR Premix agents]
+    BMI_B -->|above 30| COMBO_C[BI + GLP-1 RA\nFRC or separately]
 
     BI_ALONE -->|HbA1c above target| COMBO1
     GLP1_OR  -->|HbA1c above target| RAPID2
@@ -165,7 +155,9 @@ flowchart TD
     style COMBO_C  fill:#d1fae5,stroke:#059669,color:#064e3b
           </div>
           <div class="caption">
-            Iraq injectable algorithm v3. Gap = HbA1c − individualised target (default 7.0% if not provided).
+            Iraq injectable algorithm v3.
+            Routing is based on how far HbA1c is above the individualised target
+            (default 7.0% if not provided) and BMI.
             Premix agents: alternative when FRC and GLP-1 RA are not accessible locally.
           </div>
         </div>
@@ -185,35 +177,36 @@ flowchart TD
         <div class="node">
           <h3>Step 0 — First injectable selection</h3>
           <p>
-            The <strong>HbA1c gap</strong> (current HbA1c − individualised target) and
+            How far <strong>HbA1c is above the individualised target</strong> and
             <strong>BMI</strong> determine the starting injectable:
           </p>
           <ul>
             <li>
-              <strong>Gap &lt; 2%, BMI ≤ 30:</strong>
+              <strong>HbA1c less than 2% above target, BMI ≤ 30:</strong>
               Basal insulin &amp; titration.
               2nd-generation basal insulins (degludec, glargine U-300) preferred.
             </li>
             <li>
-              <strong>Gap &lt; 2%, BMI &gt; 30:</strong>
+              <strong>HbA1c less than 2% above target, BMI &gt; 30:</strong>
               GLP-1 RA alone (preferred) <em>or</em> BI + GLP-1 RA (FRC or separately).
             </li>
             <li>
-              <strong>Gap ≥ 2%, BMI ≤ 30:</strong>
+              <strong>HbA1c 2% or more above target, BMI ≤ 30:</strong>
               BI + GLP-1 RA (FRC or separately) — <em>or</em> premix agents
               if other options are not accessible locally.
             </li>
             <li>
-              <strong>Gap ≥ 2%, BMI &gt; 30:</strong>
+              <strong>HbA1c 2% or more above target, BMI &gt; 30:</strong>
               BI + GLP-1 RA (FRC or separately).
             </li>
           </ul>
         </div>
 
         <div class="node">
-          <h3>Step 1 — Escalation from basal-only (gap &lt; 2%, BMI ≤ 30 ladder)</h3>
+          <h3>Step 1 — Escalation from basal-only</h3>
           <p>
-            If HbA1c remains above target on <strong>basal insulin alone</strong>:
+            If HbA1c remains above target on <strong>basal insulin alone</strong>
+            (applies to the HbA1c &lt; 2% above target / BMI ≤ 30 ladder):
             escalate to <strong>BI + GLP-1 RA</strong> (FRC preferably, or separately).
           </p>
         </div>
@@ -221,8 +214,8 @@ flowchart TD
         <div class="node">
           <h3>Step 2 — Add rapid-acting insulin</h3>
           <p>
-            If HbA1c remains above target on GLP-1 RA alone, or on BI + GLP-1 RA
-            (FRC or separately):
+            If HbA1c remains above target on GLP-1 RA alone, or on
+            BI + GLP-1 RA (FRC or separately):
           </p>
           <p>→ <strong>BI (max dose) + GLP-1 RA + Rapid-acting insulin</strong>.</p>
           <p>
@@ -273,7 +266,7 @@ flowchart TD
 flowchart TD
 
     START([Start]) --> SEV
-    SEV{Catabolic symptoms\nor HbA1c ge 10 pct?}
+    SEV{Catabolic symptoms\nor HbA1c 10% or above?}
     SEV -->|Yes| SI[Start / intensify insulin\nsevere hyperglycaemia]
     SEV -->|No| F1
 
@@ -293,26 +286,26 @@ flowchart TD
     BASAL -->|Yes| BASAL2[Switch basal insulin to FRC]
     BASAL -->|No| FIRST
 
-    FIRST{HbA1c gap calculable?}
-    FIRST -->|No — use BMI| BMI_FB
-    FIRST -->|Yes gap less than 2 pct| BMI1
-    FIRST -->|Yes gap 2 pct or more| FRC1[Start FRC]
+    FIRST{HbA1c above target\nby how much?}
+    FIRST -->|Not calculable - use BMI| BMI_FB
+    FIRST -->|Less than 2% above target| BMI1
+    FIRST -->|2% or more above target| FRC1[Start FRC]
 
-    BMI1{BMI gt 30?}
+    BMI1{BMI above 30?}
     BMI1 -->|Yes| FRC2[Start FRC]
     BMI1 -->|No| BI1[Start basal insulin]
 
-    BMI_FB{BMI gt 30?}
+    BMI_FB{BMI above 30?}
     BMI_FB -->|Yes| FRC3[Start FRC]
     BMI_FB -->|No| BI2[Start basal insulin]
 
-    FRC1 --> TRNOTE
-    FRC2 --> TRNOTE
-    FRC3 --> TRNOTE
+    FRC1   --> TRNOTE
+    FRC2   --> TRNOTE
+    FRC3   --> TRNOTE
     BASAL2 --> TRNOTE
     SIMP2  --> TRNOTE
 
-    TRNOTE{Turkey and BMI lt 35?}
+    TRNOTE{Turkey and BMI below 35?}
     TRNOTE -->|Yes| NOTE[Add reimbursement note:\nFRC may be out-of-pocket]
     TRNOTE -->|No| DONE[Final recommendation]
     NOTE --> DONE
@@ -345,11 +338,11 @@ flowchart TD
           <p>On basal insulin, target unmet or PPG uncontrolled → <strong>switch to FRC</strong>.</p>
         </div>
         <div class="node">
-          <h3>5) First injectable — gap-based</h3>
+          <h3>5) First injectable</h3>
           <ul>
-            <li><strong>Gap &lt; 2%, BMI ≤ 30</strong> → basal insulin.</li>
-            <li><strong>Gap &lt; 2%, BMI &gt; 30</strong> → FRC.</li>
-            <li><strong>Gap ≥ 2% (any BMI)</strong> → FRC.</li>
+            <li><strong>HbA1c less than 2% above target, BMI ≤ 30</strong> → basal insulin.</li>
+            <li><strong>HbA1c less than 2% above target, BMI &gt; 30</strong> → FRC.</li>
+            <li><strong>HbA1c 2% or more above target (any BMI)</strong> → FRC.</li>
           </ul>
           <p>
             Turkey reimbursement note: if FRC is recommended and BMI &lt; 35 kg/m²,
@@ -386,12 +379,12 @@ flowchart TD
         </div>
 
         <div class="node">
-          <h3>Gap calculation</h3>
+          <h3>How the target drives routing</h3>
           <p>
-            <code>gap = HbA1c (current) − HbA1c (effective target)</code>.
-            Used as the primary routing variable for first injectable selection.
-            The <em>HbA1c target</em> field in the tool accepts the individualised target;
-            the gap is computed internally by the engine.
+            The engine computes <code>HbA1c (current) − HbA1c (target)</code> internally.
+            The <em>HbA1c target</em> field in the tool accepts the individualised target value;
+            how far the current HbA1c is above that target is then used as the
+            primary routing variable for first injectable selection.
           </p>
         </div>
 
@@ -411,46 +404,36 @@ flowchart TD
     </section>
   </main>
 
-  <!-- ── Mermaid (ES module) ── -->
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
 
-    // Initialise WITHOUT startOnLoad — we call mermaid.run() manually
-    // so we control exactly which elements are rendered and when.
     mermaid.initialize({
       startOnLoad: false,
       theme: "default",
       securityLevel: "loose",
     });
 
-    // Render only the elements inside a given tab panel.
     async function renderTab(panelId) {
       const panel = document.getElementById(panelId);
       if (!panel) return;
       const nodes = panel.querySelectorAll(".mermaid:not([data-processed])");
-      if (nodes.length === 0) return;          // already rendered
+      if (!nodes.length) return;
       await mermaid.run({ nodes: Array.from(nodes) });
     }
 
-    // Render the default (active) tab on first load.
+    // Render active tab on load
     renderTab("tab-iq");
 
-    // Tab switching — render diagram in newly-shown tab if not yet processed.
+    // Tab switching
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const targetId = "tab-" + e.currentTarget.dataset.tab;
-
-        // Update button states
         document.querySelectorAll(".tab-btn").forEach((b) =>
           b.classList.toggle("active", b === e.currentTarget)
         );
-
-        // Update panel visibility
-        document.querySelectorAll(".tab-panel").forEach((p) => {
-          p.classList.toggle("active", p.id === targetId);
-        });
-
-        // Render Mermaid diagram in the newly-visible tab (idempotent)
+        document.querySelectorAll(".tab-panel").forEach((p) =>
+          p.classList.toggle("active", p.id === targetId)
+        );
         await renderTab(targetId);
       });
     });
