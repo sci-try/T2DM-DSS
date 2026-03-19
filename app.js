@@ -17,8 +17,17 @@ const resultEl  = document.getElementById("result");
 const countryEl = document.getElementById("country");
 
 // ── Visibility helper — single source of truth ───────────────────────────────
-function show(el) { if (el) el.style.display = ""; }
-function hide(el) { if (el) el.style.display = "none"; }
+function show(el) {
+  if (!el) return;
+  el.hidden = false;
+  el.style.display = "";
+}
+
+function hide(el) {
+  if (!el) return;
+  el.hidden = true;
+  el.style.display = "none";
+}
 function showById(id) { show(document.getElementById(id)); }
 function hideById(id) { hide(document.getElementById(id)); }
 
@@ -78,7 +87,8 @@ function getInputs() {
   return {
     ...base,
     on_basal_insulin:       regimen === "basal",
-    on_frc:                 regimen === "frc",
+    on_frc:                 regimen === "frc" || regimen === "frc_rapid",
+    on_rapid_added:         regimen === "frc_rapid",
     on_premix:              regimen === "premix",
     on_basal_bolus:         regimen === "bb",
     recurrent_hypoglycemia: boolVal("recurrent_hypoglycemia"),

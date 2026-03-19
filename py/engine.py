@@ -1,4 +1,5 @@
 import json
+import sys
 
 # ======================
 # Country configuration
@@ -628,6 +629,12 @@ def recommend_json(js_inputs_json: str) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
     TEST_CASES = [
         # Shared gate
         {
@@ -716,7 +723,7 @@ if __name__ == "__main__":
         },
     ]
 
-    sep = "─" * 72
+    sep = "-" * 72
     for tc in TEST_CASES:
         r = recommend(tc["inputs"])
         print(sep)
