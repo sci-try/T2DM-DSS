@@ -59,6 +59,18 @@ function getRegimen() {
   return el ? el.value : "none";
 }
 
+function irregularMealPatternsYes() {
+  const el = document.querySelector(
+    'input[name="irregular_meal_patterns"]:checked'
+  );
+  return el ? el.value === "yes" : false;
+}
+
+function fpgUnit() {
+  const sel = document.getElementById("fpg_unit");
+  return sel ? sel.value : "mg_dl";
+}
+
 function getInputs() {
   const country = getCountry();
   const regimen = getRegimen();
@@ -68,7 +80,10 @@ function getInputs() {
     hba1c:              numOrNull("hba1c"),
     hba1c_target:       numOrNull("hba1c_target"),
     bmi:                numOrNull("bmi"),
+    fpg:                numOrNull("fpg"),
+    fpg_unit:           fpgUnit(),
     symptoms_catabolic: boolVal("symptoms_catabolic"),
+    irregular_meal_patterns: irregularMealPatternsYes(),
   };
 
   if (country === "IQ") {

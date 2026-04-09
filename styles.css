@@ -107,6 +107,37 @@ h3{
   color:var(--muted);
   margin-bottom:6px;
 }
+.field__label{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+.field--fpg{
+  grid-column: 1 / -1;
+}
+.field--inline{
+  grid-column: 1 / -1;
+  padding-top:4px;
+}
+.fpg-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.fpg-row input[type="number"]{
+  flex:1;
+  min-width:0;
+}
+.fpg-row select{
+  width:auto;
+  min-width:112px;
+  flex-shrink:0;
+}
+.radio--inline{
+  display:inline-flex;
+  margin-right:14px;
+}
 input[type="number"], select{
   width:100%;
   padding:10px 10px;

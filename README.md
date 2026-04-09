@@ -3,7 +3,7 @@
 Country-adaptive clinical decision support (prototype) for adults with **type 2 diabetes** focusing on:
 - **First injectable choice**
 - **Intensification**
-- **Simplification / de-escalation** (e.g., basal-bolus or premix → FRC iGlarLixi)
+- **Simplification / de-escalation** (e.g., basal-bolus or premix → FRC)
 
 Runs fully **client-side** in the browser (Pyodide). No backend, no patient data storage.
 
@@ -16,7 +16,7 @@ This tool is a **prototype** for decision-support logic transparency and interna
 **Country is the first decision node** and controls:
 - Local priority (when 2023–2026 guidance exists)
 - Availability constraints (Jordan: FRC not available)
-- Notes (Turkey reimbursement note for iGlarLixi at BMI < 35 — comment only)
+- Notes (Turkey reimbursement note for FRC at BMI < 35 — comment only)
 
 Supported: RU, TR, LB, JO, IQ, EU, US, OTHER.
 
@@ -25,9 +25,11 @@ Supported: RU, TR, LB, JO, IQ, EU, US, OTHER.
 ## Inputs (MVP)
 - Country
 - HbA1c, BMI, (optional eGFR)
+- **FPG** (optional): value + unit (mg/dL or mmol/L); mmol/L × **18.018** → mg/dL for logic
 - Catabolic symptoms
+- **Irregular meal patterns** (Yes/No; default No) — when Yes, premix is not offered where the algorithm would otherwise list it; FRC or basal-bolus preferred
 - ASCVD / HF / CKD flags
-- Availability: long-acting GLP-1 RA, FRC iGlarLixi
+- Availability: long-acting GLP-1 RA, **FRC** (fixed-ratio combination)
 - Current regimen: none / basal / GLP-1 / FRC / premix / basal-bolus
 - Simplification triggers: recurrent hypoglycaemia, regimen complexity
 
@@ -36,12 +38,12 @@ Supported: RU, TR, LB, JO, IQ, EU, US, OTHER.
 ## Decision logic (with short rationale)
 
 ### Node 1 — Severe hyperglycaemia
-**If** catabolic symptoms OR HbA1c ≥ 10% → **insulin start / urgent insulin intensification**  
+**If** catabolic symptoms OR HbA1c ≥ 10% OR **FPG > 300 mg/dL** (after conversion) → **insulin start / urgent insulin intensification**  
 **Rationale:** rapid control is prioritized in severe dysglycaemia / catabolic context.
 
 ### Node 2 — Simplification (BB or premix)
 **If** basal-bolus OR premix AND (hypoglycaemia OR complexity):
-- If FRC available (and not Jordan) → **switch to FRC iGlarLixi**
+- If FRC available (and not Jordan) → **switch to FRC**
 - Else → **simplify within insulin options**
 **Rationale:** de-intensification / simplification may be appropriate when hypoglycaemia risk or burden is high.
 
@@ -76,12 +78,12 @@ D) Default:
 
 ```mermaid
 flowchart TD
-  A[Start: Select country] --> B{Severe hyperglycaemia?\n(catabolic symptoms OR HbA1c ≥10)}
+  A[Start: Select country] --> B{Severe hyperglycaemia?\n(catabolic OR HbA1c ≥10 OR FPG > 300 mg/dL)}
   B -- Yes --> I0[Insulin start / urgent insulin intensification]
 
   B -- No --> S{On premix or basal-bolus\nAND hypoglycaemia/complexity?}
   S -- Yes --> S1{FRC available?\n(and not Jordan)}
-  S1 -- Yes --> SFRC[Simplify: switch to FRC (iGlarLixi)]
+  S1 -- Yes --> SFRC[Simplify: switch to FRC]
   S1 -- No --> SINS[Simplify within insulin options]
 
   S -- No --> D{On basal insulin?}
@@ -102,7 +104,8 @@ flowchart TD
   W1 -- No --> H{HbA1c > 9\nand FRC available?\n(and not Jordan)}
   W -- No --> H
 
-  H -- Yes --> F3[First injectable: FRC (iGlarLixi)]
+  H -- Yes --> F3[First injectable: FRC]
   H -- No --> Z{GLP-1 available?}
   Z -- Yes --> F1
   Z -- No --> F2
+```

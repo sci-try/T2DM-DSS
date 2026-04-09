@@ -10,6 +10,9 @@ COUNTRIES = {
     "IQ": {"frc": True, "label": "Iraq"},
 }
 
+# Glucose: mmol/L → mg/dL (clinical conversion for FPG gate)
+FPG_MMOL_TO_MG_DL = 18.018
+
 # ──────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────
@@ -37,6 +40,17 @@ def num(x):
         return None
 
 
+def fpg_mg_dl_from_inputs(inputs):
+    """Return FPG in mg/dL, or None if not provided. Converts mmol/L using FPG_MMOL_TO_MG_DL."""
+    raw = num(inputs.get("fpg"))
+    if raw is None:
+        return None
+    unit = str(inputs.get("fpg_unit") or "mg_dl").strip().lower().replace(" ", "")
+    if unit in ("mmol_l", "mmol/l", "mmol"):
+        return raw * FPG_MMOL_TO_MG_DL
+    return raw
+
+
 def add_tr_frc_reimbursement_note(country, profile, bmi, comments):
     if country == "TR" and bmi is not None and bmi < profile.get("tr_bmi_threshold", 35):
         comments.append(
@@ -61,9 +75,22 @@ IQ_PREMIX_NOTE = (
     "\u266f Complex insulin regimens (such as premix insulins) may be used as "
     "alternatives if other options are not accessible locally."
 )
+IQ_IRREGULAR_MEALS_NOTE = (
+    "Irregular meal patterns: premixed insulin is not recommended; prefer "
+    "fixed-ratio combination (FRC) strategies where applicable."
+)
 
-def _iq_base_comments():
-    return [IQ_GLP1_NOTE, IQ_BI_NOTE, IQ_PREMIX_NOTE]
+
+def _iq_base_comments(irregular_meal_patterns_yes):
+    """
+    If irregular_meal_patterns_yes: omit generic premix footnote; add irregular note.
+    """
+    out = [IQ_GLP1_NOTE, IQ_BI_NOTE]
+    if irregular_meal_patterns_yes:
+        out.append(IQ_IRREGULAR_MEALS_NOTE)
+    else:
+        out.append(IQ_PREMIX_NOTE)
+    return out
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -93,8 +120,9 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
     on_bi_glp1_rapid = boolv(inputs.get("on_bi_glp1_rapid"))
     on_bb            = boolv(inputs.get("on_basal_bolus"))
     on_premix        = boolv(inputs.get("on_premix"))
+    irregular        = boolv(inputs.get("irregular_meal_patterns"))
 
-    comments.extend(_iq_base_comments())
+    comments.extend(_iq_base_comments(irregular))
 
     def result(therapy, why, next_steps):
         return {
@@ -106,6 +134,23 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
 
     # ── Step 3: BI(max)+GLP-1+Rapid still unmet ─────────────────────────────
     if on_bi_glp1_rapid and target_unmet:
+        if irregular:
+            return result(
+                therapy="Intensify insulin: basal-bolus regimen",
+                why=[
+                    "HbA1c target remains unmet on BI (max dose) + GLP-1 RA "
+                    "+ rapid-acting insulin.",
+                    "Further insulin intensification is warranted "
+                    "(Iraq algorithm step 3).",
+                    "Irregular meal patterns: premixed insulin is not recommended.",
+                ],
+                next_steps=[
+                    "Basal-bolus: optimise basal dose + add / titrate "
+                    "rapid-acting insulin before each main meal.",
+                    "Reassess HbA1c in 3 months after regimen change.",
+                    "Ensure structured SMBG or CGM where available.",
+                ],
+            )
         return result(
             therapy="Intensify insulin: basal-bolus OR premixed insulin",
             why=[
@@ -124,7 +169,7 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
             ],
         )
 
-    # ── Step 2: BI+GLP-1 or GLP-1 alone still unmet → add rapid ─────────────
+    # ── Step 2: BI+GLP-1 still unmet → add rapid ───────────────────────────
     if on_bi_glp1 and target_unmet:
         return result(
             therapy="BI (max dose) + GLP-1 RA + Rapid-acting insulin",
@@ -143,20 +188,22 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
             ],
         )
 
+    # ── GLP-1 alone unmet → BI + GLP-1 RA first (then rapid on next step) ───
     if on_glp1_alone and target_unmet:
         return result(
-            therapy="BI (max dose) + GLP-1 RA + Rapid-acting insulin",
+            therapy="BI + GLP-1 RA (FRC preferably, or separately)",
             why=[
                 "HbA1c target remains unmet on GLP-1 RA alone.",
-                "Iraq algorithm: add basal insulin (titrate to max) "
-                "and rapid-acting insulin.",
+                "Iraq algorithm: escalate to BI + GLP-1 RA before adding "
+                "prandial rapid-acting insulin.",
             ],
             next_steps=[
-                "Add basal insulin (2nd-generation preferred) and titrate "
-                "to fasting glucose target.",
-                "Add rapid-acting insulin at the largest meal; titrate on "
-                "postprandial glucose.",
-                "Reassess HbA1c in 3 months.",
+                "Preferred: switch to FRC for simplicity and better GI tolerability.",
+                "Alternative: add GLP-1 RA as a separate injection alongside "
+                "basal insulin.",
+                "Titrate according to local label and glucose response.",
+                "Reassess HbA1c in 3 months; if still above target, escalate to "
+                "BI (max dose) + GLP-1 RA + rapid-acting insulin.",
             ],
         )
 
@@ -169,8 +216,7 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
                 "Iraq algorithm: escalate to BI + GLP-1 RA combination.",
             ],
             next_steps=[
-                "Preferred: switch to FRC (iDegLira or iGlarLixi) for "
-                "simplicity and better GI tolerability.",
+                "Preferred: switch to FRC for simplicity and better GI tolerability.",
                 "Alternative: add GLP-1 RA as a separate injection alongside "
                 "current basal insulin.",
                 "Titrate according to local label and glucose response.",
@@ -214,7 +260,7 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
                         "First choice: initiate GLP-1 RA alone; titrate per label.",
                         "If fasting glucose remains elevated, add basal insulin "
                         "or switch to FRC.",
-                        "FRC option: iDegLira or iGlarLixi (single pen, once daily).",
+                        "FRC: typically once daily from a single pen where available.",
                         "Reassess HbA1c in 3 months; if still above target, escalate "
                         "to BI (max) + GLP-1 RA + rapid-acting insulin.",
                     ],
@@ -243,6 +289,22 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
         # HbA1c 2% or more above target
 
         if bmi is not None and bmi <= 30:
+            if irregular:
+                return result(
+                    therapy="BI + GLP-1 RA (FRC or separately)",
+                    why=[
+                        _above_target_str(diff) + ", which is 2% or more above target.",
+                        "BMI \u2264 30 kg/m\u00b2: combination BI + GLP-1 RA is recommended "
+                        "from initiation (Iraq algorithm, step 0).",
+                        "Irregular meal patterns: premix agents are not recommended.",
+                    ],
+                    next_steps=[
+                        "Preferred: FRC — typically once daily from a single pen.",
+                        "Alternative: separate basal insulin + GLP-1 RA injections.",
+                        "Reassess HbA1c in 3 months; if still above target, escalate "
+                        "to BI (max) + GLP-1 RA + rapid-acting insulin.",
+                    ],
+                )
             return result(
                 therapy="BI + GLP-1 RA (FRC or separately)  —  or Premix agents\u266f",
                 why=[
@@ -252,7 +314,7 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
                     "are inaccessible locally (Iraq algorithm, step 0).",
                 ],
                 next_steps=[
-                    "Preferred: FRC (iDegLira or iGlarLixi) — single pen, once daily.",
+                    "Preferred: FRC — typically once daily from a single pen.",
                     "Alternative: separate basal insulin + GLP-1 RA injections.",
                     "Premix alternative (\u266f): if FRC and GLP-1 RA are not "
                     "accessible locally.",
@@ -270,7 +332,7 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
                     "from initiation (Iraq algorithm, step 0).",
                 ],
                 next_steps=[
-                    "Preferred: FRC (iDegLira or iGlarLixi) — single pen, once daily.",
+                    "Preferred: FRC — typically once daily from a single pen.",
                     "Alternative: separate basal insulin + GLP-1 RA injections.",
                     "Reassess HbA1c in 3 months; if still above target, escalate "
                     "to BI (max) + GLP-1 RA + rapid-acting insulin.",
@@ -291,7 +353,7 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
             ],
             next_steps=[
                 "Confirm BMI to refine the choice.",
-                "Preferred: FRC (iDegLira or iGlarLixi).",
+                "Preferred: FRC.",
                 "Alternative: separate basal insulin + GLP-1 RA.",
                 "Reassess HbA1c in 3 months.",
             ],
@@ -361,6 +423,9 @@ def recommend(inputs):
     symptoms_catabolic     = boolv(inputs.get("symptoms_catabolic"))
     recurrent_hypoglycemia = boolv(inputs.get("recurrent_hypoglycemia"))
     ppg_uncontrolled       = boolv(inputs.get("ppg_uncontrolled"))
+    irregular_meal_patterns = boolv(inputs.get("irregular_meal_patterns"))
+
+    fpg_mg_dl = fpg_mg_dl_from_inputs(inputs)
 
     effective_target = hba1c_target
     if effective_target is None and hba1c is not None:
@@ -382,14 +447,30 @@ def recommend(inputs):
         )
 
     # ── Shared gate: severe hyperglycaemia ───────────────────────────────────
-    severe = symptoms_catabolic or (hba1c is not None and hba1c >= 10)
+    severe_hba1c = hba1c is not None and hba1c >= 10
+    severe_fpg = fpg_mg_dl is not None and fpg_mg_dl > 300
+    severe = symptoms_catabolic or severe_hba1c or severe_fpg
     if severe:
+        why_severe = [
+            "One or more severe hyperglycaemia criteria are met: rapid "
+            "insulin-based control is needed."
+        ]
+        detail = []
+        if symptoms_catabolic:
+            detail.append("catabolic symptoms")
+        if severe_hba1c:
+            detail.append("HbA1c \u2265 10%")
+        if severe_fpg:
+            detail.append("FPG > 300 mg/dL (after unit conversion if entered in mmol/L)")
+        if detail:
+            why_severe.append("Triggers: " + "; ".join(detail) + ".")
+        if severe_fpg and fpg_mg_dl is not None:
+            comments.append(
+                f"FPG used for gate: {fpg_mg_dl:.0f} mg/dL (equivalent after conversion)."
+            )
         return {
             "therapy": "Start / intensify insulin (severe hyperglycaemia)",
-            "why": [
-                "Catabolic symptoms or HbA1c \u2265 10% require rapid "
-                "insulin-based control."
-            ],
+            "why": why_severe,
             "next_steps": [
                 "Initiate or intensify insulin with close monitoring.",
                 "Reassess regimen after initial stabilisation.",
@@ -405,6 +486,22 @@ def recommend(inputs):
 
     # On FRC + rapid + unmet
     if on_frc and on_rapid and target_unmet:
+        if irregular_meal_patterns:
+            return {
+                "therapy": "Intensify to basal-bolus regimen",
+                "why": [
+                    "HbA1c target remains unmet despite FRC plus rapid-acting insulin.",
+                    "Further intensification is warranted.",
+                    "Irregular meal patterns: premixed insulin is not recommended.",
+                ],
+                "next_steps": [
+                    "Basal-bolus: continue basal insulin + add rapid-acting insulin "
+                    "before additional meals.",
+                    "Reassess HbA1c in 3 months.",
+                    "Ensure SMBG or CGM where available.",
+                ],
+                "comments": comments,
+            }
         return {
             "therapy": "Intensify to basal-bolus regimen OR premixed insulin",
             "why": [
@@ -646,6 +743,16 @@ if __name__ == "__main__":
             "inputs": {"country": "IQ", "hba1c": 9.8, "bmi": 29,
                        "symptoms_catabolic": True},
         },
+        {
+            "label": "TR | severe (FPG > 300 mg/dL)",
+            "inputs": {"country": "TR", "hba1c": 8.0, "bmi": 28,
+                       "fpg": 310, "fpg_unit": "mg_dl"},
+        },
+        {
+            "label": "IQ | severe (FPG mmol/L converted)",
+            "inputs": {"country": "IQ", "hba1c": 8.0, "bmi": 28,
+                       "fpg": 16.7, "fpg_unit": "mmol_l"},
+        },
         # IQ first injectable
         {
             "label": "IQ | <2% above target, BMI<=30 -> Basal",
@@ -675,7 +782,7 @@ if __name__ == "__main__":
                        "on_basal_only": True},
         },
         {
-            "label": "IQ | on GLP-1 alone, unmet -> BI(max)+GLP-1+Rapid",
+            "label": "IQ | on GLP-1 alone, unmet -> BI+GLP-1",
             "inputs": {"country": "IQ", "hba1c": 8.4,
                        "hba1c_target": 7.0, "bmi": 35,
                        "on_glp1_alone": True},
@@ -691,6 +798,20 @@ if __name__ == "__main__":
             "inputs": {"country": "IQ", "hba1c": 9.0,
                        "hba1c_target": 7.0, "bmi": 31,
                        "on_bi_glp1_rapid": True},
+        },
+        {
+            "label": "IQ | >=2% above, BMI<=30, irregular meals -> BI+GLP-1 no premix",
+            "inputs": {"country": "IQ", "hba1c": 9.5,
+                       "hba1c_target": 7.0, "bmi": 27,
+                       "irregular_meal_patterns": True},
+        },
+        {
+            "label": "TR | FRC+rapid unmet, irregular -> basal-bolus only",
+            "inputs": {"country": "TR", "hba1c": 8.5,
+                       "hba1c_target": 7.0, "bmi": 30,
+                       "on_basal_insulin": False,
+                       "on_frc": True, "on_rapid_added": True,
+                       "irregular_meal_patterns": True},
         },
         # IQ no target provided
         {

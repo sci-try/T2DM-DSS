@@ -61,19 +61,6 @@
                  placeholder="e.g., 33.5" />
         </div>
 
-        <div class="field field--fpg">
-          <label for="fpg">FPG (fasting plasma glucose, optional)</label>
-          <div class="fpg-row">
-            <input id="fpg" type="number" step="0.1" min="1" max="600"
-                   placeholder="e.g., 280 or 15.5" />
-            <select id="fpg_unit" aria-label="FPG unit">
-              <option value="mg_dl">mg/dL</option>
-              <option value="mmol_l">mmol/L</option>
-            </select>
-          </div>
-          <div class="hint">Used for severe hyperglycaemia gate (FPG &gt; 300 mg/dL); mmol/L is converted automatically.</div>
-        </div>
-
       </div>
 
       <hr class="sep" />
@@ -85,19 +72,6 @@
           <input id="symptoms_catabolic" type="checkbox" />
           Catabolic symptoms / symptomatic hyperglycaemia
         </label>
-
-        <div class="field field--inline">
-          <span class="field__label">Irregular meal patterns</span>
-          <label class="radio radio--inline">
-            <input type="radio" name="irregular_meal_patterns" value="no" checked />
-            No
-          </label>
-          <label class="radio radio--inline">
-            <input type="radio" name="irregular_meal_patterns" value="yes" />
-            Yes
-          </label>
-          <div class="hint">If Yes, premixed insulin is not recommended where the algorithm would offer it; FRC is preferred.</div>
-        </div>
 
         <label class="check" id="ppg_uncontrolled_wrap" style="display:none">
           <input id="ppg_uncontrolled" type="checkbox" />

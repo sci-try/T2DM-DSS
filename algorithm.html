@@ -111,14 +111,14 @@ flowchart TD
 
     START([Initiate or intensify\ninjectable therapy]) --> SEV
 
-    SEV{Catabolic symptoms\nor HbA1c 10% or above?}
+    SEV{Catabolic symptoms\nor HbA1c 10% or above\nor FPG &gt; 300 mg/dL?}
     SEV -->|Yes| INSULIN[Start / intensify insulin\nsevere hyperglycaemia]
     SEV -->|No| REG
 
     REG{Current regimen?}
     REG -->|BI max + GLP-1 RA\n+ Rapid - target unmet| FINAL
     REG -->|BI + GLP-1 RA\n- target unmet| RAPID2
-    REG -->|GLP-1 RA alone\n- target unmet| RAPID2
+    REG -->|GLP-1 RA alone\n- target unmet| COMBO1
     REG -->|Basal insulin alone\n- target unmet| COMBO1
     REG -->|None / first injectable| ASSESS
 
@@ -139,7 +139,7 @@ flowchart TD
     BMI_B -->|above 30| COMBO_C[BI + GLP-1 RA\nFRC or separately]
 
     BI_ALONE -->|HbA1c above target| COMBO1
-    GLP1_OR  -->|HbA1c above target| RAPID2
+    GLP1_OR  -->|HbA1c above target| COMBO1
     COMBO_B  -->|HbA1c above target| RAPID2
     COMBO_C  -->|HbA1c above target| RAPID2
     COMBO1   -->|HbA1c above target| RAPID2
@@ -158,7 +158,8 @@ flowchart TD
             Iraq injectable algorithm v3.
             Routing is based on how far HbA1c is above the individualised target
             (default 7.0% if not provided) and BMI.
-            Premix agents: alternative when FRC and GLP-1 RA are not accessible locally.
+            Premix agents: alternative when FRC and GLP-1 RA are not accessible locally
+            — unless <strong>irregular meal patterns</strong> is Yes (then premix is omitted; FRC preferred).
           </div>
         </div>
 
@@ -168,7 +169,9 @@ flowchart TD
         <div class="node">
           <h3>Shared gate — Severe hyperglycaemia</h3>
           <p>
-            If <strong>catabolic symptoms</strong> are present or <strong>HbA1c ≥ 10%</strong>,
+            If <strong>catabolic symptoms</strong> are present, or <strong>HbA1c ≥ 10%</strong>,
+            or <strong>FPG &gt; 300 mg/dL</strong> (FPG may be entered as mg/dL or mmol/L; mmol/L is converted
+            in the tool using × 18.018),
             the algorithm immediately recommends <strong>start / intensify insulin</strong>.
             This overrides all other branches.
           </p>
@@ -193,7 +196,7 @@ flowchart TD
             <li>
               <strong>HbA1c 2% or more above target, BMI ≤ 30:</strong>
               BI + GLP-1 RA (FRC or separately) — <em>or</em> premix agents
-              if other options are not accessible locally.
+              if other options are not accessible locally (premix omitted if irregular meal patterns = Yes).
             </li>
             <li>
               <strong>HbA1c 2% or more above target, BMI &gt; 30:</strong>
@@ -214,10 +217,13 @@ flowchart TD
         <div class="node">
           <h3>Step 2 — Add rapid-acting insulin</h3>
           <p>
-            If HbA1c remains above target on GLP-1 RA alone, or on
-            BI + GLP-1 RA (FRC or separately):
+            If HbA1c remains above target on <strong>GLP-1 RA alone</strong>, escalate first to
+            <strong>BI + GLP-1 RA</strong> (FRC preferably, or separately).
           </p>
-          <p>→ <strong>BI (max dose) + GLP-1 RA + Rapid-acting insulin</strong>.</p>
+          <p>
+            If HbA1c remains above target on <strong>BI + GLP-1 RA</strong> (FRC or separately):
+            → <strong>BI (max dose) + GLP-1 RA + Rapid-acting insulin</strong>.
+          </p>
           <p>
             Titrate basal insulin to its maximum tolerated dose; add prandial
             rapid-acting insulin starting at the largest meal.
@@ -231,7 +237,7 @@ flowchart TD
           </p>
           <ul>
             <li><strong>Basal-bolus:</strong> optimise basal + rapid-acting insulin before each main meal.</li>
-            <li><strong>Premixed insulin:</strong> twice-daily premixed as a simpler alternative.</li>
+            <li><strong>Premixed insulin:</strong> twice-daily premixed as a simpler alternative when meal patterns are regular; if <strong>irregular meal patterns</strong> = Yes, premix is not recommended (basal-bolus only).</li>
           </ul>
         </div>
 
@@ -247,8 +253,8 @@ flowchart TD
               are preferred over older generations due to lower hypoglycaemia risk.
             </li>
             <li>
-              <strong>Premix agents:</strong> complex insulin regimens (such as premix insulins)
-              may be used as alternatives if other options are not accessible locally.
+              <strong>Premix agents:</strong> may be used as alternatives if other options are not accessible locally
+              (suppressed when irregular meal patterns = Yes; then prefer FRC).
             </li>
           </ul>
         </div>
@@ -266,7 +272,7 @@ flowchart TD
 flowchart TD
 
     START([Start]) --> SEV
-    SEV{Catabolic symptoms\nor HbA1c 10% or above?}
+    SEV{Catabolic symptoms\nor HbA1c 10% or above\nor FPG &gt; 300 mg/dL?}
     SEV -->|Yes| SI[Start / intensify insulin\nsevere hyperglycaemia]
     SEV -->|No| F1
 
@@ -311,9 +317,10 @@ flowchart TD
     NOTE --> DONE
           </div>
           <div class="caption">
-            Turkey routing logic. FRC = iGlarLixi.
+            Turkey routing logic. FRC = fixed-ratio combination of basal insulin + GLP-1 RA.
             Reimbursement note added when BMI &lt; 35 kg/m².
             If HbA1c target is missing, default 7.0% is used.
+            When <strong>irregular meal patterns</strong> = Yes, the FRC+rapid unmet branch recommends basal-bolus only (premix omitted).
           </div>
         </div>
 
@@ -322,12 +329,12 @@ flowchart TD
 
         <div class="node">
           <h3>1) Severe hyperglycaemia override</h3>
-          <p>Catabolic symptoms or HbA1c ≥ 10% → <strong>start / intensify insulin</strong> immediately.</p>
+          <p>Catabolic symptoms, HbA1c ≥ 10%, or FPG &gt; 300 mg/dL (after unit conversion) → <strong>start / intensify insulin</strong> immediately.</p>
         </div>
         <div class="node">
           <h3>2) Intensification on FRC</h3>
           <p>On FRC, target unmet → <strong>add rapid-acting insulin</strong> (may be off-label).</p>
-          <p>On FRC + rapid, target unmet → <strong>basal-bolus or premixed insulin</strong>.</p>
+          <p>On FRC + rapid, target unmet → <strong>basal-bolus or premixed insulin</strong> (premix omitted if irregular meal patterns = Yes).</p>
         </div>
         <div class="node">
           <h3>3) Simplification</h3>
@@ -363,9 +370,19 @@ flowchart TD
           <h3>Severe hyperglycaemia gate</h3>
           <p>
             Applied before any country-specific logic.
-            If <strong>catabolic symptoms</strong> are present or <strong>HbA1c ≥ 10%</strong>,
+            If <strong>catabolic symptoms</strong> are present, or <strong>HbA1c ≥ 10%</strong>,
+            or <strong>FPG &gt; 300 mg/dL</strong> (optional FPG field; mmol/L converted with × 18.018),
             the engine immediately returns
             <em>"Start / intensify insulin (severe hyperglycaemia)"</em>.
+          </p>
+        </div>
+
+        <div class="node">
+          <h3>Irregular meal patterns</h3>
+          <p>
+            Optional <strong>Yes / No</strong> (default No). When Yes, recommendations that would offer
+            <strong>premixed insulin</strong> as an option instead favour <strong>FRC</strong> or <strong>basal-bolus</strong> only,
+            depending on branch (Iraq and Turkey).
           </p>
         </div>
 
