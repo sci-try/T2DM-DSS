@@ -71,6 +71,13 @@ function fpgUnit() {
   return sel ? sel.value : "mg_dl";
 }
 
+/** IQ only: true only when GLP-1 access select is explicitly Yes. */
+function iqGlp1RaAccessFromUI() {
+  const sel = document.getElementById("iq_glp1_ra_access");
+  if (!sel) return false;
+  return sel.value === "yes";
+}
+
 function getInputs() {
   const country = getCountry();
   const regimen = getRegimen();
@@ -89,6 +96,7 @@ function getInputs() {
   if (country === "IQ") {
     return {
       ...base,
+      iq_glp1_ra_access:      iqGlp1RaAccessFromUI(),
       on_basal_only:          regimen === "basal_only",
       on_glp1_alone:          regimen === "glp1_alone",
       on_bi_glp1:             regimen === "bi_glp1",
@@ -119,16 +127,21 @@ function applyCountryRegimenSets() {
   const country   = getCountry();
   const regimenTR = document.getElementById("regimen_tr");
   const regimenIQ = document.getElementById("regimen_iq");
+  const iqGlp1Wrap = document.getElementById("iq_glp1_access_wrap");
+  const iqGlp1Sel = document.getElementById("iq_glp1_ra_access");
 
   if (country === "IQ") {
     hide(regimenTR);
     show(regimenIQ);
+    if (iqGlp1Wrap) show(iqGlp1Wrap);
     // Reset TR group so stale value never reaches getInputs()
     const noneTR = document.querySelector('input[name="regimen"][value="none"]');
     if (noneTR) noneTR.checked = true;
   } else {
     show(regimenTR);
     hide(regimenIQ);
+    if (iqGlp1Wrap) hide(iqGlp1Wrap);
+    if (iqGlp1Sel) iqGlp1Sel.value = "";
     // Reset IQ group
     const noneIQ = document.querySelector('input[name="regimen_iq"][value="none"]');
     if (noneIQ) noneIQ.checked = true;

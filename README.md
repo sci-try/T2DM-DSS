@@ -26,6 +26,7 @@ Supported: RU, TR, LB, JO, IQ, EU, US, OTHER.
 - Country
 - HbA1c, BMI, (optional eGFR)
 - **FPG** (optional): value + unit (mg/dL or mmol/L); mmol/L × **18.018** → mg/dL for logic
+- **Iraq only — Access to GLP-1 RA** (select): **Yes** enables GLP-1 RA and FRC branches; **No** or **not specified** (empty) → insulin-only recommendations (no GLP-1 / no FRC in output)
 - Catabolic symptoms
 - **Irregular meal patterns** (Yes/No; default No) — when Yes, premix is not offered where the algorithm would otherwise list it; FRC or basal-bolus preferred
 - ASCVD / HF / CKD flags

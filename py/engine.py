@@ -79,15 +79,38 @@ IQ_IRREGULAR_MEALS_NOTE = (
     "Irregular meal patterns: premixed insulin is not recommended; prefer "
     "fixed-ratio combination (FRC) strategies where applicable."
 )
+IQ_IRREGULAR_MEALS_NOTE_NO_GLP1 = (
+    "Irregular meal patterns: premixed insulin is not recommended; prefer "
+    "basal-bolus (basal + prandial rapid-acting insulin)."
+)
 
 
-def _iq_base_comments(irregular_meal_patterns_yes):
+def _iq_glp1_available(inputs):
+    """
+    True only when iq_glp1_ra_access is explicitly affirmative.
+    Missing key, None, empty string, or False → no GLP-1 / FRC access.
+    """
+    v = inputs.get("iq_glp1_ra_access")
+    if v is None:
+        return False
+    if isinstance(v, str) and v.strip() == "":
+        return False
+    return boolv(v)
+
+
+def _iq_base_comments(irregular_meal_patterns_yes, glp1_ok=True):
     """
     If irregular_meal_patterns_yes: omit generic premix footnote; add irregular note.
+    If not glp1_ok: omit IQ_GLP1_NOTE.
     """
-    out = [IQ_GLP1_NOTE, IQ_BI_NOTE]
+    out = []
+    if glp1_ok:
+        out.append(IQ_GLP1_NOTE)
+    out.append(IQ_BI_NOTE)
     if irregular_meal_patterns_yes:
-        out.append(IQ_IRREGULAR_MEALS_NOTE)
+        out.append(
+            IQ_IRREGULAR_MEALS_NOTE if glp1_ok else IQ_IRREGULAR_MEALS_NOTE_NO_GLP1
+        )
     else:
         out.append(IQ_PREMIX_NOTE)
     return out
@@ -121,8 +144,9 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
     on_bb            = boolv(inputs.get("on_basal_bolus"))
     on_premix        = boolv(inputs.get("on_premix"))
     irregular        = boolv(inputs.get("irregular_meal_patterns"))
+    glp1_ok          = _iq_glp1_available(inputs)
 
-    comments.extend(_iq_base_comments(irregular))
+    comments.extend(_iq_base_comments(irregular, glp1_ok))
 
     def result(therapy, why, next_steps):
         return {
@@ -135,15 +159,21 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
     # ── Step 3: BI(max)+GLP-1+Rapid still unmet ─────────────────────────────
     if on_bi_glp1_rapid and target_unmet:
         if irregular:
+            why_irr = [
+                "HbA1c target remains unmet on maximal basal insulin with "
+                "prandial rapid-acting insulin.",
+                "Further insulin intensification is warranted "
+                "(Iraq algorithm step 3).",
+                "Irregular meal patterns: premixed insulin is not recommended.",
+            ]
+            if glp1_ok:
+                why_irr[0] = (
+                    "HbA1c target remains unmet on BI (max dose) + GLP-1 RA "
+                    "+ rapid-acting insulin."
+                )
             return result(
                 therapy="Intensify insulin: basal-bolus regimen",
-                why=[
-                    "HbA1c target remains unmet on BI (max dose) + GLP-1 RA "
-                    "+ rapid-acting insulin.",
-                    "Further insulin intensification is warranted "
-                    "(Iraq algorithm step 3).",
-                    "Irregular meal patterns: premixed insulin is not recommended.",
-                ],
+                why=why_irr,
                 next_steps=[
                     "Basal-bolus: optimise basal dose + add / titrate "
                     "rapid-acting insulin before each main meal.",
@@ -151,14 +181,22 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
                     "Ensure structured SMBG or CGM where available.",
                 ],
             )
-        return result(
-            therapy="Intensify insulin: basal-bolus OR premixed insulin",
-            why=[
-                "HbA1c target remains unmet on BI (max dose) + GLP-1 RA "
-                "+ rapid-acting insulin.",
+        why_bb = [
+            "HbA1c target remains unmet on BI (max dose) + GLP-1 RA "
+            "+ rapid-acting insulin.",
+            "Further insulin intensification is warranted "
+            "(Iraq algorithm step 3).",
+        ]
+        if not glp1_ok:
+            why_bb = [
+                "HbA1c target remains unmet on maximal basal insulin with "
+                "prandial rapid-acting insulin.",
                 "Further insulin intensification is warranted "
                 "(Iraq algorithm step 3).",
-            ],
+            ]
+        return result(
+            therapy="Intensify insulin: basal-bolus OR premixed insulin",
+            why=why_bb,
             next_steps=[
                 "Option A – Basal-bolus: optimise basal dose + add / titrate "
                 "rapid-acting insulin before each main meal.",
@@ -171,6 +209,24 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
 
     # ── Step 2: BI+GLP-1 still unmet → add rapid ───────────────────────────
     if on_bi_glp1 and target_unmet:
+        if not glp1_ok:
+            return result(
+                therapy="Basal (max dose) + Rapid-acting insulin",
+                why=[
+                    "HbA1c target remains unmet on intensified basal insulin "
+                    "with prandial coverage.",
+                    "Without GLP-1 RA access: maximise basal insulin and add or "
+                    "titrate rapid-acting insulin (basal-bolus pattern).",
+                ],
+                next_steps=[
+                    "Titrate basal insulin to its maximum tolerated / labelled dose.",
+                    "Add rapid-acting insulin starting with the largest meal "
+                    "(basal-plus approach).",
+                    "Titrate prandial dose on postprandial glucose readings.",
+                    "Add stepwise before remaining meals if further control needed.",
+                    "Reassess HbA1c in 3 months.",
+                ],
+            )
         return result(
             therapy="BI (max dose) + GLP-1 RA + Rapid-acting insulin",
             why=[
@@ -190,6 +246,37 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
 
     # ── GLP-1 alone unmet → BI + GLP-1 RA first (then rapid on next step) ───
     if on_glp1_alone and target_unmet:
+        if not glp1_ok:
+            if irregular:
+                return result(
+                    therapy="Basal-bolus regimen (basal + prandial rapid-acting insulin)",
+                    why=[
+                        "HbA1c target remains unmet on current therapy.",
+                        "GLP-1 RA not accessible locally: escalate using insulin-only "
+                        "basal-bolus intensification.",
+                        "Irregular meal patterns: premixed insulin is not recommended.",
+                    ],
+                    next_steps=[
+                        "Initiate or intensify basal insulin; add prandial "
+                        "rapid-acting insulin starting with the largest meal.",
+                        "Titrate to glucose targets; reassess HbA1c in 3 months.",
+                    ],
+                )
+            return result(
+                therapy="Basal-bolus OR premixed insulin",
+                why=[
+                    "HbA1c target remains unmet on current therapy.",
+                    "GLP-1 RA not accessible locally: escalate using insulin-only "
+                    "options (basal-bolus or premix).",
+                ],
+                next_steps=[
+                    "Option A – Basal-bolus: basal insulin + prandial rapid-acting "
+                    "insulin titrated to meals.",
+                    "Option B – Premixed insulin: twice-daily premixed regimen "
+                    "when a simpler schedule fits.",
+                    "Reassess HbA1c in 3 months.",
+                ],
+            )
         return result(
             therapy="BI + GLP-1 RA (FRC preferably, or separately)",
             why=[
@@ -209,6 +296,36 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
 
     # ── Step 1: basal-only still unmet → BI + GLP-1 RA ──────────────────────
     if on_basal_only and target_unmet:
+        if not glp1_ok:
+            if irregular:
+                return result(
+                    therapy="Basal-bolus (add prandial rapid-acting insulin)",
+                    why=[
+                        "HbA1c target remains unmet on basal insulin alone.",
+                        "GLP-1 RA / FRC not accessible locally: intensify with "
+                        "prandial rapid-acting insulin.",
+                        "Irregular meal patterns: premixed insulin is not recommended.",
+                    ],
+                    next_steps=[
+                        "Add rapid-acting insulin starting with the largest meal; "
+                        "titrate basal to fasting target.",
+                        "Reassess HbA1c in 3 months.",
+                    ],
+                )
+            return result(
+                therapy="Basal-bolus OR premixed insulin",
+                why=[
+                    "HbA1c target remains unmet on basal insulin alone.",
+                    "GLP-1 RA / FRC not accessible locally: intensify with "
+                    "basal-bolus or premixed insulin.",
+                ],
+                next_steps=[
+                    "Basal-bolus: add prandial rapid-acting insulin titrated to meals.",
+                    "Premix alternative: consider twice-daily premixed insulin "
+                    "when a simpler multidose pattern fits.",
+                    "Reassess HbA1c in 3 months.",
+                ],
+            )
         return result(
             therapy="BI + GLP-1 RA (FRC preferably, or separately)",
             why=[
@@ -231,6 +348,21 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
         if diff < 2.0:
 
             if bmi is not None and bmi <= 30:
+                ns_basal = [
+                    "Initiate 2nd-generation basal insulin "
+                    "(e.g. degludec or glargine U-300).",
+                    "Titrate to fasting glucose target.",
+                ]
+                if glp1_ok:
+                    ns_basal.append(
+                        "Reassess HbA1c in 3 months; if still above target, "
+                        "escalate to BI + GLP-1 RA (FRC preferably or separately)."
+                    )
+                else:
+                    ns_basal.append(
+                        "Reassess HbA1c in 3 months; if still above target, "
+                        "escalate to basal-bolus or premixed insulin as appropriate."
+                    )
                 return result(
                     therapy="Basal insulin & titration",
                     why=[
@@ -238,16 +370,27 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
                         "BMI \u2264 30 kg/m\u00b2: basal insulin is the recommended "
                         "first injectable (Iraq algorithm, step 0).",
                     ],
-                    next_steps=[
-                        "Initiate 2nd-generation basal insulin "
-                        "(e.g. degludec or glargine U-300).",
-                        "Titrate to fasting glucose target.",
-                        "Reassess HbA1c in 3 months; if still above target, "
-                        "escalate to BI + GLP-1 RA (FRC preferably or separately).",
-                    ],
+                    next_steps=ns_basal,
                 )
 
             if bmi is not None and bmi > 30:
+                if not glp1_ok:
+                    return result(
+                        therapy="Basal insulin & titration",
+                        why=[
+                            _above_target_str(diff) + ", which is less than 2% above target.",
+                            "BMI > 30 kg/m\u00b2 but GLP-1 RA not accessible locally: "
+                            "basal insulin is the recommended first injectable "
+                            "(Iraq algorithm, step 0).",
+                        ],
+                        next_steps=[
+                            "Initiate 2nd-generation basal insulin "
+                            "(e.g. degludec or glargine U-300).",
+                            "Titrate to fasting glucose target.",
+                            "Reassess HbA1c in 3 months; if still above target, "
+                            "escalate to basal-bolus or premixed insulin as appropriate.",
+                        ],
+                    )
                 return result(
                     therapy="GLP-1 RA alone  OR  BI + GLP-1 RA (FRC or separately)",
                     why=[
@@ -268,9 +411,13 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
 
             # BMI unknown
             comments.append(
-                "BMI not provided; conservative basal-insulin-first choice used. "
-                "If BMI > 30, GLP-1 RA alone or BI + GLP-1 RA "
-                "(FRC or separately) may be preferred."
+                "BMI not provided; conservative basal-insulin-first choice used."
+                + (
+                    " If BMI > 30, GLP-1 RA alone or BI + GLP-1 RA "
+                    "(FRC or separately) may be preferred."
+                    if glp1_ok
+                    else " If BMI > 30 and GLP-1 RA becomes available, reassess."
+                )
             )
             return result(
                 therapy="Basal insulin & titration (BMI unknown)",
@@ -289,6 +436,35 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
         # HbA1c 2% or more above target
 
         if bmi is not None and bmi <= 30:
+            if not glp1_ok:
+                if irregular:
+                    return result(
+                        therapy="Basal-bolus (basal + prandial rapid-acting insulin)",
+                        why=[
+                            _above_target_str(diff) + ", which is 2% or more above target.",
+                            "GLP-1 RA not accessible locally: start with insulin-only "
+                            "basal-bolus from initiation.",
+                            "Irregular meal patterns: premix agents are not recommended.",
+                        ],
+                        next_steps=[
+                            "Initiate basal insulin with prandial rapid-acting "
+                            "insulin titrated to meals.",
+                            "Reassess HbA1c in 3 months; intensify basal-bolus as needed.",
+                        ],
+                    )
+                return result(
+                    therapy="Premix agents\u266f  OR  basal-bolus insulin",
+                    why=[
+                        _above_target_str(diff) + ", which is 2% or more above target.",
+                        "GLP-1 RA not accessible locally: premix or basal-bolus are "
+                        "appropriate insulin-only options (Iraq algorithm, step 0).",
+                    ],
+                    next_steps=[
+                        "Premix (\u266f): consider when a fixed mix suits the patient.",
+                        "Basal-bolus: basal insulin + prandial rapid-acting insulin.",
+                        "Reassess HbA1c in 3 months.",
+                    ],
+                )
             if irregular:
                 return result(
                     therapy="BI + GLP-1 RA (FRC or separately)",
@@ -324,6 +500,33 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
             )
 
         if bmi is not None and bmi > 30:
+            if not glp1_ok:
+                if irregular:
+                    return result(
+                        therapy="Basal-bolus (basal + prandial rapid-acting insulin)",
+                        why=[
+                            _above_target_str(diff) + ", which is 2% or more above target.",
+                            "GLP-1 RA not accessible locally: insulin-only basal-bolus "
+                            "from initiation.",
+                            "Irregular meal patterns: premix agents are not recommended.",
+                        ],
+                        next_steps=[
+                            "Initiate basal insulin with mealtime rapid-acting insulin.",
+                            "Reassess HbA1c in 3 months.",
+                        ],
+                    )
+                return result(
+                    therapy="Premix agents\u266f  OR  basal-bolus insulin",
+                    why=[
+                        _above_target_str(diff) + ", which is 2% or more above target.",
+                        "GLP-1 RA not accessible locally: premix or basal-bolus from "
+                        "initiation (Iraq algorithm, step 0).",
+                    ],
+                    next_steps=[
+                        "Premix (\u266f) or basal-bolus per patient and access.",
+                        "Reassess HbA1c in 3 months.",
+                    ],
+                )
             return result(
                 therapy="BI + GLP-1 RA (FRC or separately)",
                 why=[
@@ -341,9 +544,30 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
 
         # BMI unknown, 2% or more above target
         comments.append(
-            "BMI not provided; BI + GLP-1 RA combination recommended "
-            "when HbA1c is 2% or more above target (Iraq algorithm)."
+            (
+                "BMI not provided; insulin-only intensification (premix or basal-bolus) "
+                "recommended when HbA1c is 2% or more above target and GLP-1 RA is "
+                "not accessible (Iraq algorithm)."
+            )
+            if not glp1_ok
+            else (
+                "BMI not provided; BI + GLP-1 RA combination recommended "
+                "when HbA1c is 2% or more above target (Iraq algorithm)."
+            )
         )
+        if not glp1_ok:
+            return result(
+                therapy="Premix agents\u266f  OR  basal-bolus insulin",
+                why=[
+                    _above_target_str(diff) + ", which is 2% or more above target.",
+                    "BMI unavailable; without GLP-1 RA access, use premix or basal-bolus.",
+                ],
+                next_steps=[
+                    "Confirm BMI to refine the choice.",
+                    "Initiate premix or basal-bolus per patient factors and access.",
+                    "Reassess HbA1c in 3 months.",
+                ],
+            )
         return result(
             therapy="BI + GLP-1 RA (FRC or separately)",
             why=[
@@ -365,6 +589,21 @@ def _recommend_iq(inputs, diff, bmi, target_unmet, comments):
     )
 
     if bmi is not None and bmi > 30:
+        if not glp1_ok:
+            return result(
+                therapy="Basal insulin & titration",
+                why=[
+                    "Current HbA1c unavailable; routing based on BMI only.",
+                    "BMI > 30 kg/m\u00b2 but GLP-1 RA not accessible locally: "
+                    "start with basal insulin.",
+                ],
+                next_steps=[
+                    "Obtain current HbA1c and individualised target to confirm routing.",
+                    "Initiate 2nd-generation basal insulin and titrate to fasting "
+                    "glucose target.",
+                    "Reassess HbA1c in 3 months.",
+                ],
+            )
         return result(
             therapy="GLP-1 RA alone  OR  BI + GLP-1 RA (FRC or separately)",
             why=[
@@ -741,7 +980,8 @@ if __name__ == "__main__":
         {
             "label": "IQ | severe (catabolic)",
             "inputs": {"country": "IQ", "hba1c": 9.8, "bmi": 29,
-                       "symptoms_catabolic": True},
+                       "symptoms_catabolic": True,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "TR | severe (FPG > 300 mg/dL)",
@@ -751,59 +991,89 @@ if __name__ == "__main__":
         {
             "label": "IQ | severe (FPG mmol/L converted)",
             "inputs": {"country": "IQ", "hba1c": 8.0, "bmi": 28,
-                       "fpg": 16.7, "fpg_unit": "mmol_l"},
+                       "fpg": 16.7, "fpg_unit": "mmol_l",
+                       "iq_glp1_ra_access": True},
         },
         # IQ first injectable
         {
             "label": "IQ | <2% above target, BMI<=30 -> Basal",
             "inputs": {"country": "IQ", "hba1c": 7.8,
-                       "hba1c_target": 7.0, "bmi": 28},
+                       "hba1c_target": 7.0, "bmi": 28,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "IQ | <2% above target, BMI>30 -> GLP-1 RA or BI+GLP-1",
             "inputs": {"country": "IQ", "hba1c": 8.5,
-                       "hba1c_target": 7.0, "bmi": 34},
+                       "hba1c_target": 7.0, "bmi": 34,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "IQ | >=2% above target, BMI<=30 -> BI+GLP-1 or Premix",
             "inputs": {"country": "IQ", "hba1c": 9.5,
-                       "hba1c_target": 7.0, "bmi": 27},
+                       "hba1c_target": 7.0, "bmi": 27,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "IQ | >=2% above target, BMI>30 -> BI+GLP-1",
             "inputs": {"country": "IQ", "hba1c": 9.5,
-                       "hba1c_target": 7.0, "bmi": 33},
+                       "hba1c_target": 7.0, "bmi": 33,
+                       "iq_glp1_ra_access": True},
+        },
+        # IQ without GLP-1 RA access
+        {
+            "label": "IQ | >=2% above, BMI<=30, no GLP-1 access -> premix or BB",
+            "inputs": {"country": "IQ", "hba1c": 9.5,
+                       "hba1c_target": 7.0, "bmi": 27,
+                       "iq_glp1_ra_access": False},
+        },
+        {
+            "label": "IQ | <2% above, BMI>30, no GLP-1 access -> basal",
+            "inputs": {"country": "IQ", "hba1c": 8.5,
+                       "hba1c_target": 7.0, "bmi": 34,
+                       "iq_glp1_ra_access": False},
+        },
+        {
+            "label": "IQ | on basal only unmet, no GLP-1 access -> BB or premix",
+            "inputs": {"country": "IQ", "hba1c": 8.2,
+                       "hba1c_target": 7.0, "bmi": 28,
+                       "on_basal_only": True,
+                       "iq_glp1_ra_access": False},
         },
         # IQ intensification ladder
         {
             "label": "IQ | on basal only, unmet -> BI+GLP-1",
             "inputs": {"country": "IQ", "hba1c": 8.2,
                        "hba1c_target": 7.0, "bmi": 28,
-                       "on_basal_only": True},
+                       "on_basal_only": True,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "IQ | on GLP-1 alone, unmet -> BI+GLP-1",
             "inputs": {"country": "IQ", "hba1c": 8.4,
                        "hba1c_target": 7.0, "bmi": 35,
-                       "on_glp1_alone": True},
+                       "on_glp1_alone": True,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "IQ | on BI+GLP-1, unmet -> BI(max)+GLP-1+Rapid",
             "inputs": {"country": "IQ", "hba1c": 8.6,
                        "hba1c_target": 7.0, "bmi": 31,
-                       "on_bi_glp1": True},
+                       "on_bi_glp1": True,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "IQ | on BI(max)+GLP-1+Rapid, unmet -> BB or Premix",
             "inputs": {"country": "IQ", "hba1c": 9.0,
                        "hba1c_target": 7.0, "bmi": 31,
-                       "on_bi_glp1_rapid": True},
+                       "on_bi_glp1_rapid": True,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "IQ | >=2% above, BMI<=30, irregular meals -> BI+GLP-1 no premix",
             "inputs": {"country": "IQ", "hba1c": 9.5,
                        "hba1c_target": 7.0, "bmi": 27,
-                       "irregular_meal_patterns": True},
+                       "irregular_meal_patterns": True,
+                       "iq_glp1_ra_access": True},
         },
         {
             "label": "TR | FRC+rapid unmet, irregular -> basal-bolus only",
@@ -816,7 +1086,13 @@ if __name__ == "__main__":
         # IQ no target provided
         {
             "label": "IQ | no target, default 7.0, >=2% above, BMI>30",
-            "inputs": {"country": "IQ", "hba1c": 9.1, "bmi": 33},
+            "inputs": {"country": "IQ", "hba1c": 9.1, "bmi": 33,
+                       "iq_glp1_ra_access": True},
+        },
+        {
+            "label": "IQ | omit iq_glp1_ra_access key -> no GLP-1 path (<2% BMI>30)",
+            "inputs": {"country": "IQ", "hba1c": 8.5,
+                       "hba1c_target": 7.0, "bmi": 34},
         },
         # Turkey
         {

@@ -116,6 +116,9 @@ h3{
 .field--fpg{
   grid-column: 1 / -1;
 }
+.field--full{
+  grid-column: 1 / -1;
+}
 .field--inline{
   grid-column: 1 / -1;
   padding-top:4px;
