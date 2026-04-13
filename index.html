@@ -114,15 +114,16 @@
       <hr class="sep" />
 
       <div id="iq_glp1_access_wrap" class="field field--full" style="display:none">
-        <label for="iq_glp1_ra_access">Access to GLP-1 RA (Iraq)</label>
+        <label for="iq_glp1_ra_access">Access to long-acting GLP-1 RA (standalone, Iraq)</label>
         <select id="iq_glp1_ra_access">
-          <option value="">Not specified — treat as no access</option>
+          <option value="">Not specified — treat as no standalone LA GLP-1 RA access</option>
           <option value="yes">Yes</option>
           <option value="no">No</option>
         </select>
         <div class="hint">
-          GLP-1 RA and FRC (basal + GLP-1) branches apply only when <strong>Yes</strong>.
-          Unset or No uses insulin-only recommendations (basal-bolus, premix).
+          Fixed-ratio combination (FRC) is <strong>not</strong> asked here; the engine assumes FRC is feasible for Iraq.
+          <strong>Yes</strong> allows GLP-1 RA monotherapy and separate long-acting GLP-1 injection options where the algorithm uses them.
+          <strong>No</strong> or unset turns those off; FRC-containing recommendations still apply where the algorithm uses FRC.
         </div>
       </div>
 

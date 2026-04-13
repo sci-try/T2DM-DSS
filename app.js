@@ -71,8 +71,8 @@ function fpgUnit() {
   return sel ? sel.value : "mg_dl";
 }
 
-/** IQ only: true only when GLP-1 access select is explicitly Yes. */
-function iqGlp1RaAccessFromUI() {
+/** IQ only: true when standalone long-acting GLP-1 RA access select is explicitly Yes (maps to iq_glp1_ra_access). */
+function iqLaGlp1RaAccessFromUI() {
   const sel = document.getElementById("iq_glp1_ra_access");
   if (!sel) return false;
   return sel.value === "yes";
@@ -96,7 +96,7 @@ function getInputs() {
   if (country === "IQ") {
     return {
       ...base,
-      iq_glp1_ra_access:      iqGlp1RaAccessFromUI(),
+      iq_glp1_ra_access:      iqLaGlp1RaAccessFromUI(),
       on_basal_only:          regimen === "basal_only",
       on_glp1_alone:          regimen === "glp1_alone",
       on_bi_glp1:             regimen === "bi_glp1",

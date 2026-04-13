@@ -158,10 +158,12 @@ flowchart TD
             Iraq injectable algorithm v3.
             Routing is based on how far HbA1c is above the individualised target
             (default 7.0% if not provided) and BMI.
-            <strong>Access to GLP-1 RA</strong> (tool input): GLP-1 RA and FRC-containing branches apply only when set to <strong>Yes</strong>;
-            unset or No → insulin-only pathways (basal-bolus, premix) with no GLP-1 / FRC in recommendations.
-            Premix agents: alternative when FRC and GLP-1 RA are not accessible locally
-            — unless <strong>irregular meal patterns</strong> is Yes (then premix is omitted; FRC preferred when GLP-1 access is Yes).
+            <strong>Standalone long-acting GLP-1 RA access</strong> (tool input): when set to <strong>Yes</strong>,
+            GLP-1 RA monotherapy and separate LA GLP-1 injection options are allowed where the engine uses them.
+            When <strong>No</strong> or unset, those standalone paths are off; <strong>FRC</strong> (basal + GLP-1 fixed-ratio)
+            is <em>not</em> gated on this field and is assumed feasible — recommendations may still include FRC and, where appropriate,
+            premix or basal-bolus as alternatives.
+            Premix agents: alternative where listed — unless <strong>irregular meal patterns</strong> is Yes (then premix is omitted; prefer FRC strategies).
           </div>
         </div>
 
@@ -193,16 +195,19 @@ flowchart TD
             </li>
             <li>
               <strong>HbA1c less than 2% above target, BMI &gt; 30:</strong>
-              GLP-1 RA alone (preferred) <em>or</em> BI + GLP-1 RA (FRC or separately).
+              If standalone LA access = <strong>Yes</strong>: GLP-1 RA alone (preferred) <em>or</em> BI + GLP-1 RA (FRC or separately).
+              If <strong>No</strong> / unset: BI + GLP-1 RA via <strong>FRC</strong> <em>or</em> basal insulin &amp; titration (no GLP-1 monotherapy; no separate LA pen).
             </li>
             <li>
               <strong>HbA1c 2% or more above target, BMI ≤ 30:</strong>
-              BI + GLP-1 RA (FRC or separately) — <em>or</em> premix agents
-              if other options are not accessible locally (premix omitted if irregular meal patterns = Yes).
+              If standalone LA access = <strong>Yes</strong>: BI + GLP-1 RA (FRC or separately) — <em>or</em> premix agents
+              if needed (premix omitted if irregular meal patterns = Yes).
+              If <strong>No</strong> / unset: BI + GLP-1 RA (<strong>FRC</strong>) — <em>or</em> premix where listed (no separate LA pen).
             </li>
             <li>
               <strong>HbA1c 2% or more above target, BMI &gt; 30:</strong>
-              BI + GLP-1 RA (FRC or separately).
+              If standalone LA access = <strong>Yes</strong>: BI + GLP-1 RA (FRC or separately).
+              If <strong>No</strong> / unset: BI + GLP-1 RA (<strong>FRC</strong>) — <em>or</em> premix where listed.
             </li>
           </ul>
         </div>
@@ -212,7 +217,9 @@ flowchart TD
           <p>
             If HbA1c remains above target on <strong>basal insulin alone</strong>
             (applies to the HbA1c &lt; 2% above target / BMI ≤ 30 ladder):
-            escalate to <strong>BI + GLP-1 RA</strong> (FRC preferably, or separately).
+            escalate to <strong>BI + GLP-1 RA</strong>.
+            If standalone LA access = <strong>Yes</strong>: FRC preferably, or separate basal + LA GLP-1 RA.
+            If <strong>No</strong> / unset: use <strong>FRC</strong> (assumed feasible); separate LA injection wording is omitted.
           </p>
         </div>
 
@@ -220,10 +227,11 @@ flowchart TD
           <h3>Step 2 — Add rapid-acting insulin</h3>
           <p>
             If HbA1c remains above target on <strong>GLP-1 RA alone</strong>, escalate first to
-            <strong>BI + GLP-1 RA</strong> (FRC preferably, or separately).
+            <strong>BI + GLP-1 RA</strong> (FRC preferably, or separately when standalone LA access = <strong>Yes</strong>;
+            <strong>FRC-only</strong> incretin leg when access is <strong>No</strong> / unset).
           </p>
           <p>
-            If HbA1c remains above target on <strong>BI + GLP-1 RA</strong> (FRC or separately):
+            If HbA1c remains above target on <strong>BI + GLP-1 RA</strong> (FRC or separately when LA access allows):
             → <strong>BI (max dose) + GLP-1 RA + Rapid-acting insulin</strong>.
           </p>
           <p>
