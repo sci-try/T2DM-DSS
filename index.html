@@ -33,8 +33,8 @@
         <div class="field">
           <label for="country">Country profile</label>
           <select id="country">
-            <option value="TR" selected>Turkey (TR)</option>
-            <option value="IQ">Iraq (IQ)</option>
+            <option value="TR">Turkey (TR)</option>
+            <option value="IQ" selected>Iraq (IQ)</option>
           </select>
           <div class="hint" id="country_hint"></div>
         </div>
@@ -113,7 +113,7 @@
 
       <hr class="sep" />
 
-      <div id="iq_glp1_access_wrap" class="field field--full" style="display:none">
+      <div id="iq_glp1_access_wrap" class="field field--full">
         <label for="iq_glp1_ra_access">Access to long-acting GLP-1 RA (monotherapy, Iraq)</label>
         <select id="iq_glp1_ra_access">
           <option value="">Not specified — treat as no monotherapy LA GLP-1 RA access</option>
@@ -130,13 +130,13 @@
       <h3>Current injectable regimen</h3>
 
       <!--
-        TR regimen: visible on load (TR is default country).
-        IQ regimen: hidden on load.
+        IQ regimen: visible on load (IQ is default country).
+        TR regimen: hidden on load.
         Both use style="display:..." enforced at HTML level so no CSS
         from styles.css can override before app.js runs.
       -->
 
-      <div id="regimen_tr" class="radio-grid" style="display:block">
+      <div id="regimen_tr" class="radio-grid" style="display:none">
         <label class="radio">
           <input type="radio" name="regimen" value="none" checked />
           None / first injectable selection
@@ -163,7 +163,7 @@
         </label>
       </div>
 
-      <div id="regimen_iq" class="radio-grid" style="display:none">
+      <div id="regimen_iq" class="radio-grid" style="display:block">
         <label class="radio">
           <input type="radio" name="regimen_iq" value="none" checked />
           None / first injectable selection

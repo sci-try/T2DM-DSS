@@ -50,7 +50,7 @@ function boolVal(id) {
 }
 
 function getCountry() {
-  return countryEl ? countryEl.value : "TR";
+  return countryEl ? countryEl.value : "IQ";
 }
 
 function getRegimen() {
