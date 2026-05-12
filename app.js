@@ -71,7 +71,7 @@ function fpgUnit() {
   return sel ? sel.value : "mg_dl";
 }
 
-/** IQ only: true when standalone long-acting GLP-1 RA access select is explicitly Yes (maps to iq_glp1_ra_access). */
+/** IQ only: true when monotherapy long-acting GLP-1 RA access select is explicitly Yes (maps to iq_glp1_ra_access). */
 function iqLaGlp1RaAccessFromUI() {
   const sel = document.getElementById("iq_glp1_ra_access");
   if (!sel) return false;

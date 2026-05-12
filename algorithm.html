@@ -122,21 +122,21 @@ flowchart TD
     REG -->|Basal insulin alone\n- target unmet| COMBO1
     REG -->|None / first injectable| ASSESS
 
-    FINAL[Intensify insulin:\nBasal-bolus OR Premixed insulin]
+    FINAL[Continue / optimise\nbasal-bolus + adherence]
     RAPID2[BI max dose + GLP-1 RA\n+ Rapid-acting insulin]
-    COMBO1[BI + GLP-1 RA\nFRC preferably or separately]
+    COMBO1[BI + GLP-1 RA\nFRC or separately]
 
     ASSESS{HbA1c vs\nindividualised target}
     ASSESS -->|Less than 2% above target| BMI_A
     ASSESS -->|2% or more above target| BMI_B
 
     BMI_A{BMI}
-    BMI_A -->|30 or below| BI_ALONE[Basal insulin\nand titration]
-    BMI_A -->|above 30| GLP1_OR[GLP-1 RA alone\nOR BI + GLP-1 RA\nFRC or separately]
+    BMI_A -->|30 or below| BI_ALONE[Start basal insulin\nand titration]
+    BMI_A -->|above 30| GLP1_OR[Start GLP-1 monotherapy\nor BI + GLP-1 RA\nFRC or separately]
 
     BMI_B{BMI}
-    BMI_B -->|30 or below| COMBO_B[BI + GLP-1 RA\nFRC or separately\nOR Premix agents]
-    BMI_B -->|above 30| COMBO_C[BI + GLP-1 RA\nFRC or separately]
+    BMI_B -->|30 or below| COMBO_B[Start BI + GLP-1 RA\nFRC or separately\nor premix if needed]
+    BMI_B -->|above 30| COMBO_C[Start BI + GLP-1 RA\nFRC or separately]
 
     BI_ALONE -->|HbA1c above target| COMBO1
     GLP1_OR  -->|HbA1c above target| COMBO1
@@ -158,12 +158,14 @@ flowchart TD
             Iraq injectable algorithm v3.
             Routing is based on how far HbA1c is above the individualised target
             (default 7.0% if not provided) and BMI.
-            <strong>Standalone long-acting GLP-1 RA access</strong> (tool input): when set to <strong>Yes</strong>,
+            <strong>Monotherapy LA GLP-1 RA access</strong> (tool input <code>iq_glp1_ra_access</code>): when set to <strong>Yes</strong>,
             GLP-1 RA monotherapy and separate LA GLP-1 injection options are allowed where the engine uses them.
-            When <strong>No</strong> or unset, those standalone paths are off; <strong>FRC</strong> (basal + GLP-1 fixed-ratio)
-            is <em>not</em> gated on this field and is assumed feasible — recommendations may still include FRC and, where appropriate,
-            premix or basal-bolus as alternatives.
-            Premix agents: alternative where listed — unless <strong>irregular meal patterns</strong> is Yes (then premix is omitted; prefer FRC strategies).
+            When <strong>No</strong> or unset, those paths are off; <strong>FRC</strong> (basal + GLP-1 fixed-ratio)
+            is <em>not</em> gated on this field and is assumed feasible.
+            When access is <strong>No</strong> / unset and BMI &gt; 30 with HbA1c &lt; 2% above target, first injectable is <strong>FRC only</strong> (no parallel basal-alone start).
+            Obesity (BMI &gt; 30) first injectable with access <strong>No</strong> / unset avoids premix; with access <strong>Yes</strong>, FRC is not preferred over separate injections.
+            Premix appears only where the prose allows (e.g. BMI ≤ 30 regular meals, or when FRC unavailable); <strong>irregular meal patterns</strong> suppress premix in those branches.
+            After BI (max) + GLP-1 RA + rapid-acting insulin, Iraq output optimises basal-bolus style coverage and adherence (premixed insulin is not offered in this IQ step).
           </div>
         </div>
 
@@ -190,24 +192,26 @@ flowchart TD
           <ul>
             <li>
               <strong>HbA1c less than 2% above target, BMI ≤ 30:</strong>
-              Basal insulin &amp; titration.
-              2nd-generation basal insulins (degludec, glargine U-300) preferred.
+              <strong>Therapy (tool):</strong> Start basal insulin &amp; titration — 2nd-generation basal, titrate up to 0.5 U/kg/day.
+              <strong>Next steps</strong> focus on titration to fasting target and reassessment (dosing ceiling is stated in Therapy, not repeated in Next steps).
+              2nd-generation basal insulins are preferred overall; especially in elderly / CKD. Simpler regimens precede premix/basal-bolus.
             </li>
             <li>
               <strong>HbA1c less than 2% above target, BMI &gt; 30:</strong>
-              If standalone LA access = <strong>Yes</strong>: GLP-1 RA alone (preferred) <em>or</em> BI + GLP-1 RA (FRC or separately).
-              If <strong>No</strong> / unset: BI + GLP-1 RA via <strong>FRC</strong> <em>or</em> basal insulin &amp; titration (no GLP-1 monotherapy; no separate LA pen).
+              If monotherapy LA GLP-1 RA access = <strong>Yes</strong>: prefer <strong>Start GLP-1 RA monotherapy</strong>
+              (escalation: add basal or FRC if uncontrolled; then rapid-acting per later steps). BMI/weight favor GLP-1 RA–based paths.
+              If access = <strong>No</strong> / unset: <strong>Start BI + GLP-1 RA (FRC) only</strong> (no parallel basal-only start; FRC is how combined therapy is delivered).
             </li>
             <li>
               <strong>HbA1c 2% or more above target, BMI ≤ 30:</strong>
-              If standalone LA access = <strong>Yes</strong>: BI + GLP-1 RA (FRC or separately) — <em>or</em> premix agents
-              if needed (premix omitted if irregular meal patterns = Yes).
-              If <strong>No</strong> / unset: BI + GLP-1 RA (<strong>FRC</strong>) — <em>or</em> premix where listed (no separate LA pen).
+              If monotherapy LA access = <strong>Yes</strong>: <strong>Start BI + GLP-1 RA (FRC or separately)</strong>;
+              premix only as a complex alternative when options are inaccessible (with hypoglycaemia/adherence caveats); premix omitted if irregular meals.
+              If access = <strong>No</strong> / unset: generally <strong>Start BI + GLP-1 RA (FRC)</strong>; premix only if FRC is not available.
             </li>
             <li>
               <strong>HbA1c 2% or more above target, BMI &gt; 30:</strong>
-              If standalone LA access = <strong>Yes</strong>: BI + GLP-1 RA (FRC or separately).
-              If <strong>No</strong> / unset: BI + GLP-1 RA (<strong>FRC</strong>) — <em>or</em> premix where listed.
+              If monotherapy LA access = <strong>Yes</strong>: <strong>Start BI + GLP-1 RA (FRC or separately)</strong> without preferring FRC over separate injections.
+              If access = <strong>No</strong> / unset: <strong>Start BI + GLP-1 RA (FRC)</strong> only (no premix in this obesity-initiation row; Iraq FRC access note applies).
             </li>
           </ul>
         </div>
@@ -216,19 +220,21 @@ flowchart TD
           <h3>Step 1 — Escalation from basal-only</h3>
           <p>
             If HbA1c remains above target on <strong>basal insulin alone</strong>
-            (applies to the HbA1c &lt; 2% above target / BMI ≤ 30 ladder):
+            (after maximal titration where applicable on the BMI ≤ 30 ladder):
             escalate to <strong>BI + GLP-1 RA</strong>.
-            If standalone LA access = <strong>Yes</strong>: FRC preferably, or separate basal + LA GLP-1 RA.
-            If <strong>No</strong> / unset: use <strong>FRC</strong> (assumed feasible); separate LA injection wording is omitted.
+            If monotherapy LA GLP-1 RA access = <strong>Yes</strong>: FRC or separate basal + GLP-1 RA (no enforced preference).
+            If <strong>No</strong> / unset: use <strong>FRC</strong> (assumed feasible); explanation references inaccessible or intolerable monotherapy LA GLP-1 RA.
+            For BMI &gt; 30 with access <strong>Yes</strong>, rationale includes weight-related favoring of GLP-1 RA–based combinations.
           </p>
         </div>
 
         <div class="node">
           <h3>Step 2 — Add rapid-acting insulin</h3>
           <p>
-            If HbA1c remains above target on <strong>GLP-1 RA alone</strong>, escalate first to
-            <strong>BI + GLP-1 RA</strong> (FRC preferably, or separately when standalone LA access = <strong>Yes</strong>;
-            <strong>FRC-only</strong> incretin leg when access is <strong>No</strong> / unset).
+            If HbA1c remains above target on <strong>GLP-1 RA monotherapy</strong>, escalate first to
+            <strong>BI + GLP-1 RA</strong>: FRC or separately when monotherapy LA GLP-1 RA access = <strong>Yes</strong>
+            (no enforced FRC preference);
+            when access is <strong>No</strong> / unset remain on/increase use of <strong>FRC</strong>.
           </p>
           <p>
             If HbA1c remains above target on <strong>BI + GLP-1 RA</strong> (FRC or separately when LA access allows):
@@ -246,8 +252,10 @@ flowchart TD
             If HbA1c remains above target on BI (max) + GLP-1 RA + rapid-acting insulin:
           </p>
           <ul>
-            <li><strong>Basal-bolus:</strong> optimise basal + rapid-acting insulin before each main meal.</li>
-            <li><strong>Premixed insulin:</strong> twice-daily premixed as a simpler alternative when meal patterns are regular; if <strong>irregular meal patterns</strong> = Yes, premix is not recommended (basal-bolus only).</li>
+            <li><strong>Optimise basal-bolus-style coverage</strong> with the GLP-1 RA component (max basal, titrate rapid-acting across meals).</li>
+            <li><strong>If HbA1c and/or prandial control remain inadequate,</strong> prioritise <strong>adherence</strong>
+            (injection–meal alignment, education, SMBG/CGM, follow-up) before adding further complexity.</li>
+            <li>Premixed insulin is <strong>not</strong> listed in this Iraq step (tool output).</li>
           </ul>
         </div>
 
@@ -265,6 +273,13 @@ flowchart TD
             <li>
               <strong>Premix agents:</strong> may be used as alternatives if other options are not accessible locally
               (suppressed when irregular meal patterns = Yes; then prefer FRC).
+            </li>
+            <li>
+              <strong>In Iraq,</strong> FRC can be a pragmatic way to deliver GLP-1 RA therapy; when monotherapy LA GLP-1 RA is unavailable,
+              FRC is often the most feasible GLP-1 RA access route in tool recommendations.
+            </li>
+            <li>
+              <strong>Complex insulin</strong> (premix or basal-bolus) is reserved until simpler strategies fail or are unavailable.
             </li>
           </ul>
         </div>
