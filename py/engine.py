@@ -717,37 +717,44 @@ def recommend(inputs):
             "HbA1c target was not provided; default target of 7.0% was used."
         )
 
-    # ── Shared gate: severe hyperglycaemia ───────────────────────────────────
-    severe_hba1c = hba1c is not None and hba1c >= 10
-    severe_fpg = fpg_mg_dl is not None and fpg_mg_dl > 300
-    severe = symptoms_catabolic or severe_hba1c or severe_fpg
-    if severe:
-        why_severe = [
-            "One or more severe hyperglycaemia criteria are met: rapid "
-            "insulin-based control is needed."
-        ]
-        detail = []
-        if symptoms_catabolic:
-            detail.append("catabolic symptoms")
-        if severe_hba1c:
-            detail.append("HbA1c \u2265 10%")
-        if severe_fpg:
-            detail.append("FPG > 300 mg/dL (after unit conversion if entered in mmol/L)")
-        if detail:
-            why_severe.append("Triggers: " + "; ".join(detail) + ".")
-        if severe_fpg and fpg_mg_dl is not None:
-            comments.append(
-                f"FPG used for gate: {fpg_mg_dl:.0f} mg/dL (equivalent after conversion)."
-            )
-        return {
-            "therapy": "Start / intensify insulin (severe hyperglycaemia)",
-            "why": why_severe,
-            "next_steps": [
-                "Initiate or intensify insulin with close monitoring.",
-                "Reassess regimen after initial stabilisation.",
-            ],
-            "comments": comments,
-        }
+    # ── Turkey: severe hyperglycaemia gate ───────────────────────────────────
+    # Iraq (IQ) uses regimen-first routing; severe / unstable hyperglycaemia is
+    # out of scope for this tool (see page disclaimer). TR keeps the FPG /
+    # catabolic / HbA1c >= 10% override.
+    if country == "TR":
+        severe_hba1c = hba1c is not None and hba1c >= 10
+        severe_fpg = fpg_mg_dl is not None and fpg_mg_dl > 300
+        severe = symptoms_catabolic or severe_hba1c or severe_fpg
+        if severe:
+            why_severe = [
+                "One or more severe hyperglycaemia criteria are met: rapid "
+                "insulin-based control is needed."
+            ]
+            detail = []
+            if symptoms_catabolic:
+                detail.append("catabolic symptoms")
+            if severe_hba1c:
+                detail.append("HbA1c \u2265 10%")
+            if severe_fpg:
+                detail.append(
+                    "FPG > 300 mg/dL (after unit conversion if entered in mmol/L)"
+                )
+            if detail:
+                why_severe.append("Triggers: " + "; ".join(detail) + ".")
+            if severe_fpg and fpg_mg_dl is not None:
+                comments.append(
+                    f"FPG used for gate: {fpg_mg_dl:.0f} mg/dL "
+                    "(equivalent after conversion)."
+                )
+            return {
+                "therapy": "Start / intensify insulin (severe hyperglycaemia)",
+                "why": why_severe,
+                "next_steps": [
+                    "Initiate or intensify insulin with close monitoring.",
+                    "Reassess regimen after initial stabilisation.",
+                ],
+                "comments": comments,
+            }
 
     # ── Iraq branch ───────────────────────────────────────────────────────────
     if country == "IQ":
@@ -1004,27 +1011,22 @@ if __name__ == "__main__":
             pass
 
     TEST_CASES = [
-        # Shared gate
+        # TR severe gate (not used for IQ — regimen-first)
         {
             "label": "TR | severe (HbA1c 10.5)",
             "inputs": {"country": "TR", "hba1c": 10.5, "bmi": 33},
         },
         {
-            "label": "IQ | severe (catabolic)",
-            "inputs": {"country": "IQ", "hba1c": 9.8, "bmi": 29,
+            "label": "IQ | regimen-first ignores catabolic + high FPG (no severe shortcut)",
+            "inputs": {"country": "IQ", "hba1c": 8.0, "hba1c_target": 7.0, "bmi": 28,
                        "symptoms_catabolic": True,
+                       "fpg": 16.7, "fpg_unit": "mmol_l",
                        "iq_glp1_ra_access": True},
         },
         {
             "label": "TR | severe (FPG > 300 mg/dL)",
             "inputs": {"country": "TR", "hba1c": 8.0, "bmi": 28,
                        "fpg": 310, "fpg_unit": "mg_dl"},
-        },
-        {
-            "label": "IQ | severe (FPG mmol/L converted)",
-            "inputs": {"country": "IQ", "hba1c": 8.0, "bmi": 28,
-                       "fpg": 16.7, "fpg_unit": "mmol_l",
-                       "iq_glp1_ra_access": True},
         },
         # IQ first injectable
         {

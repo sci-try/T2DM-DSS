@@ -129,11 +129,19 @@ function applyCountryRegimenSets() {
   const regimenIQ = document.getElementById("regimen_iq");
   const iqGlp1Wrap = document.getElementById("iq_glp1_access_wrap");
   const iqGlp1Sel = document.getElementById("iq_glp1_ra_access");
+  const fpgWrap = document.getElementById("fpg_wrap");
+  const catabolicWrap = document.getElementById("symptoms_catabolic_wrap");
+  const fpgEl = document.getElementById("fpg");
+  const catabolicEl = document.getElementById("symptoms_catabolic");
 
   if (country === "IQ") {
     hide(regimenTR);
     show(regimenIQ);
     if (iqGlp1Wrap) show(iqGlp1Wrap);
+    if (fpgWrap) hide(fpgWrap);
+    if (catabolicWrap) hide(catabolicWrap);
+    if (fpgEl) fpgEl.value = "";
+    if (catabolicEl) catabolicEl.checked = false;
     // Reset TR group so stale value never reaches getInputs()
     const noneTR = document.querySelector('input[name="regimen"][value="none"]');
     if (noneTR) noneTR.checked = true;
@@ -142,6 +150,8 @@ function applyCountryRegimenSets() {
     hide(regimenIQ);
     if (iqGlp1Wrap) hide(iqGlp1Wrap);
     if (iqGlp1Sel) iqGlp1Sel.value = "";
+    if (fpgWrap) show(fpgWrap);
+    if (catabolicWrap) show(catabolicWrap);
     // Reset IQ group
     const noneIQ = document.querySelector('input[name="regimen_iq"][value="none"]');
     if (noneIQ) noneIQ.checked = true;

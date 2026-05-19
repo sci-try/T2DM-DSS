@@ -10,6 +10,8 @@ Runs fully **client-side** in the browser (Pyodide). No backend, no patient data
 ## Disclaimer
 This tool is a **prototype** for decision-support logic transparency and internal evaluation. It does **not** replace clinical judgement, local policies, or product labels.
 
+It does **not** cover patients with **severe unstable hyperglycaemia**, who require urgent evaluation and management outside the Iraq tool pathway (and should not be inferred from Turkey-only severe-gate inputs).
+
 ---
 
 ## Country-first priority
@@ -18,17 +20,18 @@ This tool is a **prototype** for decision-support logic transparency and interna
 - Availability constraints (Jordan: FRC not available)
 - Notes (Turkey reimbursement note for FRC at BMI < 35 — comment only)
 
-Supported: RU, TR, LB, JO, IQ, EU, US, OTHER.
+The shipped **engine** (`py/engine.py`) currently implements **Turkey (TR)** and **Iraq (IQ)** only; other country codes in older docs may be aspirational.
 
 ---
 
 ## Inputs (MVP)
 - Country
 - HbA1c, BMI, (optional eGFR)
-- **FPG** (optional): value + unit (mg/dL or mmol/L); mmol/L × **18.018** → mg/dL for logic
+- **FPG** (optional, **Turkey** UI): value + unit (mg/dL or mmol/L); mmol/L × **18.018** → mg/dL for the **Turkey** severe-gate. Hidden for **Iraq**.
 - **Iraq only — Monotherapy long-acting GLP-1 RA access** (select, key `iq_glp1_ra_access`): explicit **Yes** → monotherapy LA GLP-1 RA and separate LA injection paths where used; **No** or **not specified** (empty) → those paths off (no GLP-1 monotherapy / no separate LA pen in output)
 - **Iraq — FRC** (basal + GLP-1 fixed-ratio): not a separate availability field; **assumed feasible** in Iraq routing
-- Catabolic symptoms
+- **Catabolic symptoms** (**Turkey** UI only; hidden for **Iraq**)
+- **Iraq** uses **regimen-first** logic: there is **no** severe-hyperglycaemia shortcut from FPG, catabolic symptoms, or HbA1c ≥ 10% before the Iraq branches; unstable severe hyperglycaemia is **out of scope** (disclaimer / page footers).
 - **Irregular meal patterns** (Yes/No; default No) — when Yes, premix is not offered where the algorithm would otherwise list it; FRC or basal-bolus preferred
 - ASCVD / HF / CKD flags
 - Availability (non-Iraq flows): long-acting GLP-1 RA, **FRC** where applicable per country
@@ -39,9 +42,11 @@ Supported: RU, TR, LB, JO, IQ, EU, US, OTHER.
 
 ## Decision logic (with short rationale)
 
-### Node 1 — Severe hyperglycaemia
-**If** catabolic symptoms OR HbA1c ≥ 10% OR **FPG > 300 mg/dL** (after conversion) → **insulin start / urgent insulin intensification**  
+### Node 1 — Severe hyperglycaemia (Turkey only in current engine)
+**For Turkey (TR):** **If** catabolic symptoms OR HbA1c ≥ 10% OR **FPG > 300 mg/dL** (after conversion) → **insulin start / urgent insulin intensification**  
 **Rationale:** rapid control is prioritized in severe dysglycaemia / catabolic context.
+
+**For Iraq (IQ):** This gate is **not** applied; the tool routes from **current injectable regimen** and related rules. Use clinical judgement for severe unstable hyperglycaemia outside the tool.
 
 ### Node 2 — Simplification (BB or premix)
 **If** basal-bolus OR premix AND (hypoglycaemia OR complexity):

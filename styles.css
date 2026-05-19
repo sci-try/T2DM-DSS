@@ -276,3 +276,19 @@ input[type="number"]:focus, select:focus{
 .btn-link:hover{
   filter:brightness(0.98);
 }
+
+.page-footer{
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  background: linear-gradient(180deg, #f4f6fb, #ffffff);
+}
+.page-footer__text{
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 72ch;
+}
+.page-footer__text strong{
+  color: var(--ink);
+}

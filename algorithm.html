@@ -109,11 +109,7 @@
           <div class="mermaid" id="mermaid-iq">
 flowchart TD
 
-    START([Initiate or intensify\ninjectable therapy]) --> SEV
-
-    SEV{Catabolic symptoms\nor HbA1c 10% or above\nor FPG &gt; 300 mg/dL?}
-    SEV -->|Yes| INSULIN[Start / intensify insulin\nsevere hyperglycaemia]
-    SEV -->|No| REG
+    START([Initiate or intensify\ninjectable therapy]) --> REG
 
     REG{Current regimen?}
     REG -->|BI max + GLP-1 RA\n+ Rapid - target unmet| FINAL
@@ -145,7 +141,6 @@ flowchart TD
     COMBO1   -->|HbA1c above target| RAPID2
     RAPID2   -->|HbA1c above target| FINAL
 
-    style INSULIN  fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
     style FINAL    fill:#fef3c7,stroke:#d97706,color:#78350f
     style RAPID2   fill:#fef3c7,stroke:#d97706,color:#78350f
     style COMBO1   fill:#d1fae5,stroke:#059669,color:#064e3b
@@ -156,8 +151,9 @@ flowchart TD
           </div>
           <div class="caption">
             Iraq injectable algorithm v3.
-            Routing is based on how far HbA1c is above the individualised target
+            Routing starts from <strong>current regimen</strong>, then how far HbA1c is above the individualised target
             (default 7.0% if not provided) and BMI.
+            Patients with <strong>severe unstable hyperglycaemia</strong> are out of scope for this pathway.
             <strong>Monotherapy LA GLP-1 RA access</strong> (tool input <code>iq_glp1_ra_access</code>): when set to <strong>Yes</strong>,
             GLP-1 RA monotherapy and separate LA GLP-1 injection options are allowed where the engine uses them.
             When <strong>No</strong> or unset, those paths are off; <strong>FRC</strong> (basal + GLP-1 fixed-ratio)
@@ -173,13 +169,13 @@ flowchart TD
         <h2>Iraq — Textual description</h2>
 
         <div class="node">
-          <h3>Shared gate — Severe hyperglycaemia</h3>
+          <h3>Scope — Severe unstable hyperglycaemia</h3>
           <p>
-            If <strong>catabolic symptoms</strong> are present, or <strong>HbA1c ≥ 10%</strong>,
-            or <strong>FPG &gt; 300 mg/dL</strong> (FPG may be entered as mg/dL or mmol/L; mmol/L is converted
-            in the tool using × 18.018),
-            the algorithm immediately recommends <strong>start / intensify insulin</strong>.
-            This overrides all other branches.
+            The Iraq pathway in this tool starts from <strong>current injectable regimen</strong>
+            and routings driven by HbA1c vs target and BMI. It does <strong>not</strong> model
+            patients with <strong>severe unstable hyperglycaemia</strong>, who should be managed
+            urgently outside this decision tree. (Turkey still applies a severe-hyperglycaemia
+            gate in the engine; see the Turkey tab and Shared gates.)
           </p>
         </div>
 
@@ -392,13 +388,18 @@ flowchart TD
         <h2>Shared logic (all countries)</h2>
 
         <div class="node">
-          <h3>Severe hyperglycaemia gate</h3>
+          <h3>Severe hyperglycaemia gate (Turkey only)</h3>
           <p>
-            Applied before any country-specific logic.
-            If <strong>catabolic symptoms</strong> are present, or <strong>HbA1c ≥ 10%</strong>,
+            For <strong>Turkey (TR)</strong>, before Turkey-specific branches the engine applies:
+            if <strong>catabolic symptoms</strong> are present, or <strong>HbA1c ≥ 10%</strong>,
             or <strong>FPG &gt; 300 mg/dL</strong> (optional FPG field; mmol/L converted with × 18.018),
             the engine immediately returns
             <em>"Start / intensify insulin (severe hyperglycaemia)"</em>.
+          </p>
+          <p>
+            <strong>Iraq (IQ)</strong> does <strong>not</strong> use this gate; routing begins with
+            the Iraq regimen-first algorithm. Severe unstable hyperglycaemia is explicitly out of
+            scope for the Iraq tool pathway (see disclaimer).
           </p>
         </div>
 
@@ -441,10 +442,22 @@ flowchart TD
         or product labels. Always individualise therapy. Off-label situations,
         reimbursement restrictions, and local access conditions should be reviewed
         before implementation.
+        The tool does <strong>not</strong> cover patients with
+        <strong>severe unstable hyperglycaemia</strong>, who require urgent evaluation
+        and management outside this pathway.
       </p>
 
     </section>
   </main>
+
+  <footer class="page-footer">
+    <div class="container">
+      <p class="page-footer__text">
+        <strong>Scope:</strong> This tool does not cover patients with severe unstable
+        hyperglycaemia, who require urgent evaluation and management outside this pathway.
+      </p>
+    </div>
+  </footer>
 
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
