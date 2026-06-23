@@ -253,6 +253,57 @@ input[type="number"]:focus, select:focus{
   color: #24324a;
 }
 
+/* ── Recommendation card (slide 11-14 design) ──────────────────────────── */
+.rec__primary{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:14px 16px;
+  background:#ecfdf5;
+  border:1px solid #a7f3d0;
+  border-left:5px solid #059669;
+  border-radius:12px;
+}
+.rec__primary-icon{ font-size:18px; line-height:1.4; }
+.rec__primary-label{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.6px;
+  font-weight:700;
+  color:#047857;
+  margin-bottom:2px;
+}
+.rec__primary-therapy{
+  font-size:15px;
+  font-weight:700;
+  color:#064e3b;
+}
+.rec__section{ margin-top:16px; }
+.rec__title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 8px 0;
+  font-size:14px;
+  color:#1a2233;
+}
+.rec__section--kc{
+  background:#f3f4f6;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px 14px;
+}
+.rec__kc{ list-style:none; margin:6px 0 0 0; padding:0; }
+.rec__kc li{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  margin:8px 0;
+  font-size:13px;
+}
+.rec__kc .rec__kc-icon{ flex-shrink:0; }
+.rec__kc .rec__kc-lead{ font-weight:700; }
+
 .top-actions{
   display:flex;
   align-items:center;

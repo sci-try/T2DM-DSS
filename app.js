@@ -1,6 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  app.js  –  T2D Injectable Therapy CDS  v3
-//  Supports: Turkey (TR) · Iraq (IQ)
+//  Currently Iraq (IQ) only. Türkiye (TR) is disabled legacy — re-enable by
+//  restoring the TR markup in index.html and setting TR_ENABLED = True in
+//  py/engine.py (legacy code paths below are kept commented for that purpose).
 //
 //  Visibility is controlled exclusively via style.display.
 //  index.html sets the correct initial state via inline style="display:..."
@@ -14,6 +16,7 @@ let pyodide = null;
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const statusEl  = document.getElementById("status");
 const resultEl  = document.getElementById("result");
+// LEGACY (TR): country selector removed from the Iraq-only UI.
 const countryEl = document.getElementById("country");
 
 // ── Visibility helper — single source of truth ───────────────────────────────
@@ -49,14 +52,24 @@ function boolVal(id) {
   return el ? el.checked : false;
 }
 
+function selVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : null;
+}
+
+// Returns the checked radio value for a group, or null.
+function radioVal(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : null;
+}
+
+// Iraq-only deployment. (LEGACY: return countryEl ? countryEl.value : "IQ";)
 function getCountry() {
-  return countryEl ? countryEl.value : "IQ";
+  return "IQ";
 }
 
 function getRegimen() {
-  const name = getCountry() === "IQ" ? "regimen_iq" : "regimen";
-  const el   = document.querySelector(`input[name="${name}"]:checked`);
-  return el ? el.value : "none";
+  return radioVal("regimen_iq") || "none";
 }
 
 function irregularMealPatternsYes() {
@@ -71,51 +84,28 @@ function fpgUnit() {
   return sel ? sel.value : "mg_dl";
 }
 
-/** IQ only: true when monotherapy long-acting GLP-1 RA access select is explicitly Yes (maps to iq_glp1_ra_access). */
+/** IQ only: true when the monotherapy long-acting GLP-1 RA access radio is Yes (maps to iq_glp1_ra_access). */
 function iqLaGlp1RaAccessFromUI() {
-  const sel = document.getElementById("iq_glp1_ra_access");
-  if (!sel) return false;
-  return sel.value === "yes";
+  return radioVal("iq_glp1_ra_access") === "yes";
 }
 
 function getInputs() {
-  const country = getCountry();
   const regimen = getRegimen();
 
-  const base = {
-    country,
-    hba1c:              numOrNull("hba1c"),
-    hba1c_target:       numOrNull("hba1c_target"),
-    bmi:                numOrNull("bmi"),
-    fpg:                numOrNull("fpg"),
-    fpg_unit:           fpgUnit(),
-    symptoms_catabolic: boolVal("symptoms_catabolic"),
-    irregular_meal_patterns: irregularMealPatternsYes(),
-  };
-
-  if (country === "IQ") {
-    return {
-      ...base,
-      iq_glp1_ra_access:      iqLaGlp1RaAccessFromUI(),
-      on_basal_only:          regimen === "basal_only",
-      on_glp1_alone:          regimen === "glp1_alone",
-      on_bi_glp1:             regimen === "bi_glp1",
-      on_bi_glp1_rapid:       regimen === "bi_glp1_rapid",
-      on_premix:              regimen === "premix",
-      on_basal_bolus:         regimen === "bb",
-      recurrent_hypoglycemia: boolVal("recurrent_hypoglycemia"),
-    };
-  }
-
+  // Iraq-only payload: simple binary bands + current-regimen flags.
   return {
-    ...base,
-    on_basal_insulin:       regimen === "basal",
-    on_frc:                 regimen === "frc" || regimen === "frc_rapid",
-    on_rapid_added:         regimen === "frc_rapid",
+    country:                "IQ",
+    hba1c_band:             radioVal("hba1c_band"),
+    bmi_band:               radioVal("bmi_band"),
+    irregular_meal_patterns: irregularMealPatternsYes(),
+    iq_glp1_ra_access:      iqLaGlp1RaAccessFromUI(),
+    on_basal_only:          regimen === "basal_only",
+    on_glp1_alone:          regimen === "glp1_alone",
+    on_bi_glp1:             regimen === "bi_glp1",
+    on_bi_glp1_rapid:       regimen === "bi_glp1_rapid",
     on_premix:              regimen === "premix",
     on_basal_bolus:         regimen === "bb",
     recurrent_hypoglycemia: boolVal("recurrent_hypoglycemia"),
-    ppg_uncontrolled:       boolVal("ppg_uncontrolled"),
   };
 }
 
@@ -123,85 +113,29 @@ function getInputs() {
 //  UI RULES
 // ══════════════════════════════════════════════════════════════════════════════
 
+// Iraq-only: ensure the IQ regimen set is visible. (LEGACY TR branch removed.)
 function applyCountryRegimenSets() {
-  const country   = getCountry();
-  const regimenTR = document.getElementById("regimen_tr");
-  const regimenIQ = document.getElementById("regimen_iq");
-  const iqGlp1Wrap = document.getElementById("iq_glp1_access_wrap");
-  const iqGlp1Sel = document.getElementById("iq_glp1_ra_access");
-  const fpgWrap = document.getElementById("fpg_wrap");
-  const catabolicWrap = document.getElementById("symptoms_catabolic_wrap");
-  const fpgEl = document.getElementById("fpg");
-  const catabolicEl = document.getElementById("symptoms_catabolic");
-
-  if (country === "IQ") {
-    hide(regimenTR);
-    show(regimenIQ);
-    if (iqGlp1Wrap) show(iqGlp1Wrap);
-    if (fpgWrap) hide(fpgWrap);
-    if (catabolicWrap) hide(catabolicWrap);
-    if (fpgEl) fpgEl.value = "";
-    if (catabolicEl) catabolicEl.checked = false;
-    // Reset TR group so stale value never reaches getInputs()
-    const noneTR = document.querySelector('input[name="regimen"][value="none"]');
-    if (noneTR) noneTR.checked = true;
-  } else {
-    show(regimenTR);
-    hide(regimenIQ);
-    if (iqGlp1Wrap) hide(iqGlp1Wrap);
-    if (iqGlp1Sel) iqGlp1Sel.value = "";
-    if (fpgWrap) show(fpgWrap);
-    if (catabolicWrap) show(catabolicWrap);
-    // Reset IQ group
-    const noneIQ = document.querySelector('input[name="regimen_iq"][value="none"]');
-    if (noneIQ) noneIQ.checked = true;
-  }
+  show(document.getElementById("regimen_iq"));
 }
 
 function applyHints() {
-  const country     = getCountry();
-  const countryHint = document.getElementById("country_hint");
   const regimenHint = document.getElementById("regimen_hint");
-
-  if (countryHint) {
-    countryHint.textContent = country === "TR"
-      ? "Turkey: when FRC is recommended and BMI is below 35 kg/m², "
-        + "reimbursement may be limited and treatment may be out-of-pocket."
-      : "Iraq: routing is based on how far HbA1c is above the individualised "
-        + "target and BMI. Select the current regimen to route intensification correctly.";
-  }
-
   if (regimenHint) {
-    regimenHint.textContent = country === "TR"
-      ? "Turkey logic is FRC/reimbursement-oriented. "
-        + "Standalone GLP-1 RA appears only as an optional note."
-      : "Iraq algorithm: each regimen step maps to a specific intensification branch.";
+    regimenHint.textContent =
+      "Iraq algorithm: each regimen step maps to a specific intensification branch.";
   }
 }
 
 function applyRegimenUIRules() {
-  const country = getCountry();
   const regimen = getRegimen();
 
   // Hide all contextual checkboxes first
   hideById("ppg_uncontrolled_wrap");
   hideById("recurrent_hypoglycemia_wrap");
 
-  if (country === "IQ") {
-    // Hypoglycaemia only relevant on premix / bb
-    if (regimen === "premix" || regimen === "bb") {
-      showById("recurrent_hypoglycemia_wrap");
-    }
-    // ppg_uncontrolled: not part of Iraq algorithm — stays hidden
-
-  } else {
-    // Turkey
-    if (regimen === "basal") {
-      showById("ppg_uncontrolled_wrap");
-    }
-    if (regimen === "premix" || regimen === "bb") {
-      showById("recurrent_hypoglycemia_wrap");
-    }
+  // Iraq: recurrent hypoglycaemia only relevant on premix / basal-bolus.
+  if (regimen === "premix" || regimen === "bb") {
+    showById("recurrent_hypoglycemia_wrap");
   }
 }
 
@@ -226,12 +160,66 @@ function fillList(ulId, items) {
   });
 }
 
+// Slide-aligned per-line icon for a Key Considerations item.
+function kcIcon(text) {
+  const t = text.toLowerCase();
+  if (t.startsWith("hba1c target")) return "🧪";
+  if (t.includes("basal insulin:") || t.includes("2nd-generation basal")) return "💉";
+  if (t.startsWith("glp-1 ra choice")) return "⚖️";
+  if (t.startsWith("frc")) return "🔗";
+  if (t.startsWith("basal-bolus")) return "🔄";
+  if (t.startsWith("premix")) return "⚖️";
+  if (t.startsWith("irregular")) return "⚠️";
+  return "🔹";
+}
+
+function fillKeyConsiderations(items) {
+  const ul = document.getElementById("key_considerations");
+  if (!ul) return;
+  ul.innerHTML = "";
+  (items || []).forEach((x) => {
+    const text = String(x);
+    const li = document.createElement("li");
+
+    const icon = document.createElement("span");
+    icon.className = "rec__kc-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = kcIcon(text);
+    li.appendChild(icon);
+
+    const body = document.createElement("span");
+    const idx = text.indexOf(":");
+    if (idx > -1) {
+      const lead = document.createElement("span");
+      lead.className = "rec__kc-lead";
+      lead.textContent = text.slice(0, idx + 1);
+      body.appendChild(lead);
+      body.appendChild(document.createTextNode(text.slice(idx + 1)));
+    } else {
+      body.textContent = text;
+    }
+    li.appendChild(body);
+    ul.appendChild(li);
+  });
+}
+
 function render(rec) {
   const therapyEl = document.getElementById("therapy");
   if (therapyEl) therapyEl.textContent = rec.therapy || "";
 
   fillList("why",  rec.why        || []);
   fillList("next", rec.next_steps || []);
+
+  const kcBlock = document.getElementById("kc_block");
+  const keyConsiderations = rec.key_considerations || [];
+  if (kcBlock) {
+    if (keyConsiderations.length) {
+      show(kcBlock);
+      fillKeyConsiderations(keyConsiderations);
+    } else {
+      hide(kcBlock);
+    }
+  }
 
   const commentsBlock = document.getElementById("comments_block");
   const comments      = rec.comments || [];
@@ -296,11 +284,9 @@ document.getElementById("run").addEventListener("click", () => {
 //  EVENT WIRING
 // ══════════════════════════════════════════════════════════════════════════════
 
-countryEl.addEventListener("change", refreshUI);
+// LEGACY (TR): country selector is absent in the Iraq-only UI; guard before use.
+if (countryEl) countryEl.addEventListener("change", refreshUI);
 
-document.querySelectorAll('input[name="regimen"]').forEach((el) =>
-  el.addEventListener("change", applyRegimenUIRules)
-);
 document.querySelectorAll('input[name="regimen_iq"]').forEach((el) =>
   el.addEventListener("change", applyRegimenUIRules)
 );

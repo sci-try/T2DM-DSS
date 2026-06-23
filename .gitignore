@@ -1,0 +1,7 @@
+# Local-only PDF tool (not part of Pyodide / GitHub Pages CDS)
+tools/pdf_reader/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class

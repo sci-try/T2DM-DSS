@@ -28,34 +28,36 @@
     <section class="card">
       <h2>Inputs</h2>
 
+      <!-- ============================================================
+        LEGACY (TR): country selector, numeric HbA1c/target/BMI,
+        FPG/random PG, and the Türkiye clinical panel are disabled.
+        Re-enable by uncommenting this block and setting
+        TR_ENABLED = True in py/engine.py.
+      =============================================================
       <div class="form-grid">
 
         <div class="field">
           <label for="country">Country profile</label>
           <select id="country">
-            <option value="TR">Turkey (TR)</option>
+            <option value="TR">Türkiye (TR)</option>
             <option value="IQ" selected>Iraq (IQ)</option>
           </select>
           <div class="hint" id="country_hint"></div>
         </div>
 
-        <div class="field">
+        <div class="field" id="hba1c_wrap">
           <label for="hba1c">HbA1c (%)</label>
           <input id="hba1c" type="number" step="0.1" min="4" max="20"
                  placeholder="e.g., 9.2" />
         </div>
 
-        <div class="field">
+        <div class="field" id="hba1c_target_wrap">
           <label for="hba1c_target">HbA1c target (%)</label>
           <input id="hba1c_target" type="number" step="0.1" min="4" max="10"
                  placeholder="e.g., 7.0" />
-          <div class="hint">
-            Optional — defaults to 7.0% if not provided.
-            How far HbA1c is above the target determines the injectable strategy.
-          </div>
         </div>
 
-        <div class="field">
+        <div class="field" id="bmi_wrap">
           <label for="bmi">BMI (kg/m²)</label>
           <input id="bmi" type="number" step="0.1" min="10" max="80"
                  placeholder="e.g., 33.5" />
@@ -64,27 +66,80 @@
         <div id="fpg_wrap" class="field field--fpg">
           <label for="fpg">FPG (fasting plasma glucose, optional)</label>
           <div class="fpg-row">
-            <input id="fpg" type="number" step="0.1" min="1" max="600"
-                   placeholder="e.g., 280 or 15.5" />
+            <input id="fpg" type="number" step="0.1" min="1" max="600" />
             <select id="fpg_unit" aria-label="FPG unit">
               <option value="mg_dl">mg/dL</option>
               <option value="mmol_l">mmol/L</option>
             </select>
           </div>
-          <div class="hint">Used for severe hyperglycaemia gate (FPG &gt; 300 mg/dL); mmol/L is converted automatically.</div>
+        </div>
+
+        <div id="random_pg_wrap" class="field field--fpg" style="display:none">
+          <label for="random_pg">Random / casual plasma glucose (optional, TR)</label>
+          <div class="fpg-row">
+            <input id="random_pg" type="number" step="0.1" min="1" max="600" />
+            <select id="random_pg_unit" aria-label="Random glucose unit">
+              <option value="mg_dl">mg/dL</option>
+              <option value="mmol_l">mmol/L</option>
+            </select>
+          </div>
         </div>
 
       </div>
 
-      <hr class="sep" />
+      <div id="tr_clinical_panel" style="display:none">
+        <h3>Türkiye — severe-gate symptoms (TEMD §9.2.3)</h3>
+        <div class="check-grid">
+          <label class="check"><input id="symptoms_hyperglycemic" type="checkbox" /> Hyperglycaemic symptoms</label>
+          <label class="check"><input id="symptoms_weight_loss" type="checkbox" /> Weight loss / catabolic signs</label>
+          <label class="check"><input id="symptoms_metabolic_emergency" type="checkbox" /> Suspected metabolic emergency</label>
+        </div>
+        <h3>Türkiye — individualised therapy (TEMD Şekil 9.4 / §9.2.4)</h3>
+        <div class="check-grid">
+          <label class="check"><input id="tr_ascvd" type="checkbox" /> Established ASCVD</label>
+          <label class="check"><input id="tr_hf" type="checkbox" /> Heart failure (HF)</label>
+          <label class="check"><input id="tr_ckd" type="checkbox" /> Chronic kidney disease (CKD)</label>
+          <label class="check"><input id="tr_masld" type="checkbox" /> MASLD context</label>
+        </div>
+      </div>
 
-      <h3>Clinical status</h3>
+      <div id="regimen_tr" class="radio-grid" style="display:none">
+        <label class="radio"><input type="radio" name="regimen" value="none" checked /> None / first injectable selection</label>
+        <label class="radio"><input type="radio" name="regimen" value="basal" /> Basal insulin</label>
+        <label class="radio"><input type="radio" name="regimen" value="frc" /> FRC</label>
+        <label class="radio"><input type="radio" name="regimen" value="frc_rapid" /> FRC + rapid-acting insulin</label>
+        <label class="radio"><input type="radio" name="regimen" value="premix" /> Premix insulin</label>
+        <label class="radio"><input type="radio" name="regimen" value="bb" /> Basal-bolus insulin</label>
+      </div>
+      ============================ /LEGACY (TR) ==================== -->
+
+      <h3>Patient profile</h3>
       <div class="check-grid">
 
-        <label id="symptoms_catabolic_wrap" class="check">
-          <input id="symptoms_catabolic" type="checkbox" />
-          Catabolic symptoms / symptomatic hyperglycaemia
-        </label>
+        <div class="field field--inline">
+          <span class="field__label">HbA1c vs individualised target</span>
+          <label class="radio radio--inline">
+            <input type="radio" name="hba1c_band" value="lt2" checked />
+            Less than 2% above target
+          </label>
+          <label class="radio radio--inline">
+            <input type="radio" name="hba1c_band" value="ge2" />
+            2% or more above target
+          </label>
+          <div class="hint">Simple binary band against the individualised target (default 7.0%). Determines the Iraq injectable strategy.</div>
+        </div>
+
+        <div class="field field--inline">
+          <span class="field__label">BMI (kg/m²)</span>
+          <label class="radio radio--inline">
+            <input type="radio" name="bmi_band" value="le30" checked />
+            30 or below
+          </label>
+          <label class="radio radio--inline">
+            <input type="radio" name="bmi_band" value="gt30" />
+            Above 30
+          </label>
+        </div>
 
         <div class="field field--inline">
           <span class="field__label">Irregular meal patterns</span>
@@ -99,6 +154,23 @@
           <div class="hint">If Yes, premixed insulin is not recommended where the algorithm would offer it; FRC is preferred.</div>
         </div>
 
+        <div class="field field--inline">
+          <span class="field__label">GLP-1 RA accessible / tolerated (monotherapy)</span>
+          <label class="radio radio--inline">
+            <input type="radio" name="iq_glp1_ra_access" value="no" checked />
+            No
+          </label>
+          <label class="radio radio--inline">
+            <input type="radio" name="iq_glp1_ra_access" value="yes" />
+            Yes
+          </label>
+          <div class="hint">
+            <strong>Yes</strong> enables GLP-1 RA monotherapy and separate long-acting GLP-1 paths where the algorithm uses them.
+            <strong>No</strong> turns those off; FRC-containing recommendations still apply. (FRC is always assumed feasible for Iraq.)
+          </div>
+        </div>
+
+        <!-- LEGACY (TR-only) — hidden -->
         <label class="check" id="ppg_uncontrolled_wrap" style="display:none">
           <input id="ppg_uncontrolled" type="checkbox" />
           Postprandial glucose uncontrolled
@@ -113,55 +185,7 @@
 
       <hr class="sep" />
 
-      <div id="iq_glp1_access_wrap" class="field field--full">
-        <label for="iq_glp1_ra_access">Access to long-acting GLP-1 RA (monotherapy, Iraq)</label>
-        <select id="iq_glp1_ra_access">
-          <option value="">Not specified — treat as no monotherapy LA GLP-1 RA access</option>
-          <option value="yes">Yes</option>
-          <option value="no">No</option>
-        </select>
-        <div class="hint">
-          Fixed-ratio combination (FRC) is <strong>not</strong> asked here; the engine assumes FRC is feasible for Iraq.
-          <strong>Yes</strong> allows GLP-1 RA monotherapy and separate long-acting GLP-1 injection options where the algorithm uses them.
-          <strong>No</strong> or unset turns those paths off; FRC-containing recommendations still apply where the algorithm uses FRC.
-        </div>
-      </div>
-
       <h3>Current injectable regimen</h3>
-
-      <!--
-        IQ regimen: visible on load (IQ is default country).
-        TR regimen: hidden on load.
-        Both use style="display:..." enforced at HTML level so no CSS
-        from styles.css can override before app.js runs.
-      -->
-
-      <div id="regimen_tr" class="radio-grid" style="display:none">
-        <label class="radio">
-          <input type="radio" name="regimen" value="none" checked />
-          None / first injectable selection
-        </label>
-        <label class="radio">
-          <input type="radio" name="regimen" value="basal" />
-          Basal insulin
-        </label>
-        <label class="radio">
-          <input type="radio" name="regimen" value="frc" />
-          FRC
-        </label>
-        <label class="radio">
-          <input type="radio" name="regimen" value="frc_rapid" />
-          FRC + rapid-acting insulin
-        </label>
-        <label class="radio">
-          <input type="radio" name="regimen" value="premix" />
-          Premix insulin
-        </label>
-        <label class="radio">
-          <input type="radio" name="regimen" value="bb" />
-          Basal-bolus insulin
-        </label>
-      </div>
 
       <div id="regimen_iq" class="radio-grid" style="display:block">
         <label class="radio">
@@ -202,24 +226,32 @@
       </div>
     </section>
 
-    <section class="card" id="result" hidden>
-      <h2>Recommendation</h2>
-
-      <div class="kv">
-        <div class="kv__k">Therapy</div>
-        <div class="kv__v" id="therapy"></div>
+    <section class="card rec" id="result" hidden>
+      <div class="rec__primary">
+        <span class="rec__primary-icon" aria-hidden="true">🟩</span>
+        <div class="rec__primary-body">
+          <div class="rec__primary-label">Recommendation</div>
+          <div class="rec__primary-therapy" id="therapy"></div>
+        </div>
       </div>
 
-      <hr class="sep" />
+      <div class="rec__section">
+        <h3 class="rec__title"><span aria-hidden="true">🧠</span> Rationale</h3>
+        <ul id="why" class="list"></ul>
+      </div>
 
-      <h3>Rationale</h3>
-      <ul id="why" class="list"></ul>
+      <div class="rec__section">
+        <h3 class="rec__title"><span aria-hidden="true">🟨</span> Next steps</h3>
+        <ul id="next" class="list"></ul>
+      </div>
 
-      <h3>Next steps</h3>
-      <ul id="next" class="list"></ul>
+      <div id="kc_block" class="rec__section rec__section--kc" style="display:none">
+        <h3 class="rec__title"><span aria-hidden="true">🔹</span> Key Considerations</h3>
+        <ul id="key_considerations" class="list rec__kc"></ul>
+      </div>
 
-      <div id="comments_block" style="display:none">
-        <h3>Notes</h3>
+      <div id="comments_block" class="rec__section" style="display:none">
+        <h3 class="rec__title"><span aria-hidden="true">📝</span> Notes</h3>
         <ul id="comments" class="list"></ul>
       </div>
 
