@@ -126,7 +126,6 @@
             <input type="radio" name="hba1c_band" value="ge2" />
             2% or more above target
           </label>
-          <div class="hint">Simple binary band against the individualised target (default 7.0%). Determines the Iraq injectable strategy.</div>
         </div>
 
         <div class="field field--inline">
@@ -151,7 +150,6 @@
             <input type="radio" name="irregular_meal_patterns" value="yes" />
             Yes
           </label>
-          <div class="hint">If Yes, premixed insulin is not recommended where the algorithm would offer it; FRC is preferred.</div>
         </div>
 
         <div class="field field--inline">
@@ -164,10 +162,6 @@
             <input type="radio" name="iq_glp1_ra_access" value="yes" />
             Yes
           </label>
-          <div class="hint">
-            <strong>Yes</strong> enables GLP-1 RA monotherapy and separate long-acting GLP-1 paths where the algorithm uses them.
-            <strong>No</strong> turns those off; FRC-containing recommendations still apply. (FRC is always assumed feasible for Iraq.)
-          </div>
         </div>
 
         <!-- LEGACY (TR-only) — hidden -->
@@ -218,8 +212,6 @@
         </label>
       </div>
 
-      <div class="hint" id="regimen_hint"></div>
-
       <div class="actions">
         <button id="run" class="btn">Generate recommendation</button>
         <div id="status" class="status">Not initialized</div>
@@ -248,11 +240,6 @@
       <div id="kc_block" class="rec__section rec__section--kc" style="display:none">
         <h3 class="rec__title"><span aria-hidden="true">🔹</span> Key Considerations</h3>
         <ul id="key_considerations" class="list rec__kc"></ul>
-      </div>
-
-      <div id="comments_block" class="rec__section" style="display:none">
-        <h3 class="rec__title"><span aria-hidden="true">📝</span> Notes</h3>
-        <ul id="comments" class="list"></ul>
       </div>
 
       <hr class="sep" />

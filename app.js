@@ -118,13 +118,8 @@ function applyCountryRegimenSets() {
   show(document.getElementById("regimen_iq"));
 }
 
-function applyHints() {
-  const regimenHint = document.getElementById("regimen_hint");
-  if (regimenHint) {
-    regimenHint.textContent =
-      "Iraq algorithm: each regimen step maps to a specific intensification branch.";
-  }
-}
+// Input hints are switched off; kept as a no-op so refreshUI() stays intact.
+function applyHints() {}
 
 function applyRegimenUIRules() {
   const regimen = getRegimen();
@@ -218,17 +213,6 @@ function render(rec) {
       fillKeyConsiderations(keyConsiderations);
     } else {
       hide(kcBlock);
-    }
-  }
-
-  const commentsBlock = document.getElementById("comments_block");
-  const comments      = rec.comments || [];
-  if (commentsBlock) {
-    if (comments.length) {
-      show(commentsBlock);
-      fillList("comments", comments);
-    } else {
-      hide(commentsBlock);
     }
   }
 
